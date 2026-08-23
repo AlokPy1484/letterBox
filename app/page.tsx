@@ -5,10 +5,13 @@ import background from "../public/02-real.png"
 import prop from "../public/01.avif"
 import loni from "../public/03-loni.jpeg"
 import loni2 from "../public/04-loni.jpeg"
-import { MoveLeft, MoveRight } from "lucide-react";
+import { MoveLeft, MoveRight, Pause, Play } from "lucide-react";
 import Noise from "../components/Noise"
 import { TypingAnimation } from "@/components/ui/typing-animation"
 import { AnimatePresence, motion, scale } from "motion/react"
+import styles from "../components/AudioPlayer/AudioPlayer.module.css"
+import { cn } from "@/lib/utils";
+import { useRef, useState } from "react";
 
 
 
@@ -38,6 +41,37 @@ export default function Home() {
       display: "block"
     }
   }
+
+  const audioRef = useRef<HTMLAudioElement>(null)
+
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [progress, setProgress] = useState(0)
+
+
+  const handleTogglePlay = () => {
+    if (!audioRef.current) return
+
+    if (isPlaying) {
+      audioRef.current.pause()
+
+    }
+    else {
+      audioRef.current.play()
+
+    }
+    setIsPlaying(!isPlaying)
+  }
+
+  const handleProgressUpdate = () => {
+    if (!audioRef) return
+
+    const currTime = audioRef.current?.currentTime
+    const totalTime = audioRef.current?.duration
+    setProgress(currTime / totalTime * 100)
+  }
+
+
+
 
 
   return (
@@ -72,7 +106,7 @@ export default function Home() {
 
 
 
-        <div className=" w-full max-w-[672px] md:text-2xl mx-auto  z-10 ">
+        <div className=" w-full max-w-[672px] max-h-[40vh] overflow-scroll md:text-2xl mx-auto  z-10 ">
           <TypingAnimation as="span"
             className="inline bg-orange-400/40 rounded-sm px-2 py-1 leading-[2.6rem] [box-decoration-break:clone] [-webkit-box-decoration-break:clone] z-100"
             typeSpeed={75}
@@ -80,24 +114,55 @@ export default function Home() {
           >
             Lorem ipsum dolor sit amet consectetur adipisicing elit. Dicta placeat rerum obcaecati sapiente similique? Velit magni a adipisci, fuga illum temporibus officiis autem minus veniam aperiam ratione, possimus sunt quisquam!
             Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis aliquam voluptates facere corrupti dolores omnis at repudiandae explicabo expedita ex quae, ipsum incidunt odio aspernatur beatae blanditiis corporis. Ratione, quisquam!
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis aliquam voluptates facere corrupti dolores omnis at repudiandae explicabo expedita ex quae, ipsum incidunt odio aspernatur beatae blanditiis corporis. Ratione, quisquam!
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis aliquam voluptates facere corrupti dolores omnis at repudiandae explicabo expedita ex quae, ipsum incidunt odio aspernatur beatae blanditiis corporis. Ratione, quisquam!
+
           </TypingAnimation>
         </div>
 
 
 
-        <div className="flex justify-between items-center w-full text-xs z-10">
+        <div className="flex justify-between items-end w-full text-xs z-10">
           <span className="flex flex-col justify-center items-start">
             <a>TO: SHREY</a>
             <a>FROM: PANDEY</a>
             <a>SUMITTED: 15 FEB 2025 AT 02:07</a>
           </span>
-          <motion.span className="absolute right-8 bottom-8 group"
+
+          <div className="flex justify-center text-black w-full">
+
+            <audio ref={audioRef} src="/yellow.mp3" title="Yellow by Coldplay" onTimeUpdate={handleProgressUpdate} />
+            {/* <source src="/yellow.mp3" type="audio/mpeg" />
+              Your browser does not support the audio element. */}
+            <div className="flex justify-between items-center gap-4 w-full max-w-[300px] ">
+              <div className="rounded-full border border-[0.8px] border-neutral-400 p-2 mt-2 mb-1" onClick={handleTogglePlay}>
+                {isPlaying ? <Pause fill="black" size={16} /> : <Play fill="black" size={16} />}
+              </div>
+              <div className="flex flex-col justify-between items-start w-full h-full">
+                <a className="text-[12px] text-neutral-200">{audioRef.current?.title}</a>
+                <input type="range" min={0} max={100} value={progress} className={`${styles.slider} w-full`}
+                  style={{
+                    background: `linear-gradient(to right, white ${progress}%, #404040 ${progress}%)`,
+
+                  }} />
+                <div className="flex justify-between w-full text-neutral-400">
+                  <a>{audioRef.current?.currentTime.toFixed(2)}</a>
+                  <a>{audioRef.current?.duration.toFixed(2)}</a>
+                </div>
+              </div>
+
+
+            </div>
+
+
+          </div>
+          <motion.span className="relative  group"
             variants={parentVariants}
             initial="rest"
             whileHover="hover">
 
 
-            <Image src={prop} alt="prop" className=" w-36 h-24 object-cover hover:backdrop-blur-2xl  z-100" />
+            <Image src={prop} alt="prop" className=" w-46 h-24 object-cover hover:backdrop-blur-2xl  z-100" />
             <span className=" absolute inset-0 w-full h-full bg-neutral-300 z-50 opacity-0 hover:opacity-60 transition-opacity duration-300 ease-in-out"></span>
 
             <AnimatePresence>
