@@ -11,7 +11,7 @@ import { TypingAnimation } from "@/components/ui/typing-animation"
 import { AnimatePresence, motion, scale } from "motion/react"
 import styles from "../components/AudioPlayer/AudioPlayer.module.css"
 import { cn } from "@/lib/utils";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 
 
@@ -65,10 +65,20 @@ export default function Home() {
   const handleProgressUpdate = () => {
     if (!audioRef) return
 
-    const currTime = audioRef.current?.currentTime
-    const totalTime = audioRef.current?.duration
+    const currTime = audioRef.current?.currentTime ?? 0
+    const totalTime = audioRef.current?.duration ?? 0
     setProgress(currTime / totalTime * 100)
   }
+
+  const containerRef = useRef<HTMLDivElement>(null)
+
+
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    containerRef.current.scrollTop = containerRef.current.scrollHeight
+
+  }, [])
 
 
 
@@ -80,7 +90,10 @@ export default function Home() {
       <span>
         <Image src={loni} alt="background" className="absolute inset-0 object-cover w-full h-dvh z-0" />
       </span>
-      <div className="relative flex flex-col  justify-between items-center w-screen h-dvh p-8 text-neutral-100">
+      <span className="absolute left-0 bottom-0 object-cover w-full h-[20vh] z-0 bg-gradient-to-t from-white/70 to-transparent z-10"></span>
+
+
+      <div className="relative flex flex-col  justify-between items-center w-screen h-dvh p-4 md:p-8 text-neutral-100">
 
         <Noise
           patternSize={250}
@@ -90,7 +103,6 @@ export default function Home() {
           patternAlpha={20}
 
         />
-
 
         <div className="flex justify-between items-center w-full text-xs  z-10 py-4">
           <a className="flex justify-center items-center gap-2 bg-orange-400/40 p-1 rounded-xl">
@@ -104,9 +116,8 @@ export default function Home() {
         </div>
 
 
-
-
-        <div className=" w-full max-w-[672px] max-h-[40vh] overflow-scroll md:text-2xl mx-auto  z-10 ">
+        <div className=" w-full max-w-[672px] max-h-[60vh] overflow-scroll md:text-2xl mx-auto md:px-2 px-12 my-8  z-10 "
+          ref={containerRef}>
           <TypingAnimation as="span"
             className="inline bg-orange-400/40 rounded-sm px-2 py-1 leading-[2.6rem] [box-decoration-break:clone] [-webkit-box-decoration-break:clone] z-100"
             typeSpeed={75}
@@ -121,20 +132,71 @@ export default function Home() {
         </div>
 
 
+        <div className="flex flex-col justify-end items-between gap-8 w-full">
+          <div className="flex justify-between items-end w-full text-xs z-10">
+            <span className="flex flex-col justify-center items-start">
+              <a>TO: SHREY</a>
+              <a>FROM: PANDEY</a>
+              <a>SUMITTED: 15 FEB 2025 AT 02:07</a>
+            </span>
 
-        <div className="flex justify-between items-end w-full text-xs z-10">
-          <span className="flex flex-col justify-center items-start">
-            <a>TO: SHREY</a>
-            <a>FROM: PANDEY</a>
-            <a>SUMITTED: 15 FEB 2025 AT 02:07</a>
-          </span>
+            {/* Music Player */}
+            <div className="hidden md:flex justify-center text-black w-full">
 
-          <div className="flex justify-center text-black w-full">
+              <audio ref={audioRef} src="/yellow.mp3" title="Yellow by Coldplay" onTimeUpdate={handleProgressUpdate} />
+              {/* <source src="/yellow.mp3" type="audio/mpeg" />
+              Your browser does not support the audio element. */}
+              <div className="flex justify-between items-center gap-4 w-full max-w-[300px] ">
+                <div className="rounded-full border border-[0.8px] border-neutral-400 p-2 mt-2 mb-1" onClick={handleTogglePlay}>
+                  {isPlaying ? <Pause fill="black" size={16} /> : <Play fill="black" size={16} />}
+                </div>
+                <div className="flex flex-col justify-between items-start w-full h-full">
+                  <a className="text-[12px] text-neutral-200">{audioRef.current?.title}</a>
+                  <input type="range" min={0} max={100} value={progress} className={`${styles.slider} w-full`}
+                    style={{
+                      background: `linear-gradient(to right, white ${progress}%, #404040 ${progress}%)`,
+
+                    }} />
+                  <div className="flex justify-between w-full text-neutral-400">
+                    <a>{audioRef.current?.currentTime.toFixed(2)}</a>
+                    <a>{audioRef.current?.duration.toFixed(2)}</a>
+                  </div>
+                </div>
+
+
+              </div>
+            </div>
+
+
+
+
+            <motion.span className="relative  group z-[9999]"
+              variants={parentVariants}
+              initial="rest"
+              whileHover="hover">
+
+
+              <Image src={prop} alt="prop" className=" w-36 md:w-46 h-24 object-cover hover:backdrop-blur-2xl  z-100" />
+              <span className=" absolute inset-0 w-full h-full bg-neutral-300 z-100 opacity-0 hover:opacity-60 transition-opacity duration-300 ease-in-out"></span>
+
+              <AnimatePresence>
+                <motion.div className="absolute bottom-34 right-0 flex flex-col justify-center items-center gap-4 bg-neutral-200 p-4 "
+                  variants={childVariants}>
+                  <Image src={loni2} alt="postal image" className="object-cover min-w-[180px] z-[9999] " />
+                  <a className="text-neutral-900 flex justify-center w-full pt-2">Loni Kalbhor</a>
+                </motion.div>
+              </AnimatePresence>
+
+            </motion.span>
+          </div>
+
+          {/* Music Player */}
+          <div className="flex md:hidden justify-center text-black w-full">
 
             <audio ref={audioRef} src="/yellow.mp3" title="Yellow by Coldplay" onTimeUpdate={handleProgressUpdate} />
             {/* <source src="/yellow.mp3" type="audio/mpeg" />
               Your browser does not support the audio element. */}
-            <div className="flex justify-between items-center gap-4 w-full max-w-[300px] ">
+            <div className="flex justify-between items-center gap-4 w-full  ">
               <div className="rounded-full border border-[0.8px] border-neutral-400 p-2 mt-2 mb-1" onClick={handleTogglePlay}>
                 {isPlaying ? <Pause fill="black" size={16} /> : <Play fill="black" size={16} />}
               </div>
@@ -153,27 +215,7 @@ export default function Home() {
 
 
             </div>
-
-
           </div>
-          <motion.span className="relative  group"
-            variants={parentVariants}
-            initial="rest"
-            whileHover="hover">
-
-
-            <Image src={prop} alt="prop" className=" w-46 h-24 object-cover hover:backdrop-blur-2xl  z-100" />
-            <span className=" absolute inset-0 w-full h-full bg-neutral-300 z-50 opacity-0 hover:opacity-60 transition-opacity duration-300 ease-in-out"></span>
-
-            <AnimatePresence>
-              <motion.div className="absolute bottom-34 right-0 flex flex-col justify-center items-center gap-4 bg-neutral-200 p-4 "
-                variants={childVariants}>
-                <Image src={loni2} alt="postal image" className="object-cover min-w-[180px]" />
-                <a className="text-neutral-900 flex justify-center w-full pt-2">Loni Kalbhor</a>
-              </motion.div>
-            </AnimatePresence>
-
-          </motion.span>
         </div>
 
       </div>
