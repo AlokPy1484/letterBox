@@ -16,8 +16,6 @@ import { useEffect, useRef, useState } from "react";
 
 
 
-
-
 export default function Home() {
 
 
@@ -77,20 +75,28 @@ export default function Home() {
     if (!containerRef.current) return
 
     containerRef.current.scrollTop = containerRef.current.scrollHeight
-
   }, [])
 
+
+
+  const handleChangeProgress = (e) => {
+    if (!audioRef) return
+
+    const time = Number(e.target.value)
+
+    setProgress(time)
+  }
 
 
 
 
   return (
-    <div className="w-screen h-dvh">
+    <div className="w-screen h-dvh overflow-hidden">
 
       <span>
         <Image src={loni} alt="background" className="absolute inset-0 object-cover w-full h-dvh z-0" />
       </span>
-      <span className="absolute left-0 bottom-0 object-cover w-full h-[20vh] z-0 bg-gradient-to-t from-white/70 to-transparent z-10"></span>
+      <span className="absolute left-0 bottom-0 object-cover w-full h-[20dvh] z-0 bg-gradient-to-t from-white/70 to-transparent z-10"></span>
 
 
       <div className="relative flex flex-col  justify-between items-center w-screen h-dvh p-4 md:p-8 text-neutral-100">
@@ -115,20 +121,25 @@ export default function Home() {
           </a>
         </div>
 
+        <div className="relative ">
+          <div className=" w-full max-w-[672px] max-h-[60vh] overflow-scroll md:text-2xl mx-auto md:px-2 px-12 my-8  z-10 "
+            ref={containerRef}>
+            {/* <span className="absolute inset-0 h-[8vh] bg-radial-to-b from-white/5 to-transparent backdrop-blur-xs"></span>
+            <span className="absolute bottom-0 left-0  h-[8vh] w-full bg-radial-to-t from-white/5 to-transparent backdrop-blur-xs z-10"></span> */}
 
-        <div className=" w-full max-w-[672px] max-h-[60vh] overflow-scroll md:text-2xl mx-auto md:px-2 px-12 my-8  z-10 "
-          ref={containerRef}>
-          <TypingAnimation as="span"
-            className="inline bg-orange-400/40 rounded-sm px-2 py-1 leading-[2.6rem] [box-decoration-break:clone] [-webkit-box-decoration-break:clone] z-100"
-            typeSpeed={75}
-            startOnView={false}
-          >
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Dicta placeat rerum obcaecati sapiente similique? Velit magni a adipisci, fuga illum temporibus officiis autem minus veniam aperiam ratione, possimus sunt quisquam!
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis aliquam voluptates facere corrupti dolores omnis at repudiandae explicabo expedita ex quae, ipsum incidunt odio aspernatur beatae blanditiis corporis. Ratione, quisquam!
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis aliquam voluptates facere corrupti dolores omnis at repudiandae explicabo expedita ex quae, ipsum incidunt odio aspernatur beatae blanditiis corporis. Ratione, quisquam!
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis aliquam voluptates facere corrupti dolores omnis at repudiandae explicabo expedita ex quae, ipsum incidunt odio aspernatur beatae blanditiis corporis. Ratione, quisquam!
 
-          </TypingAnimation>
+            <TypingAnimation as="span"
+              className="inline bg-orange-400/40 rounded-sm px-2 py-1 leading-[2.6rem] [box-decoration-break:clone] [-webkit-box-decoration-break:clone] z-100"
+              typeSpeed={75}
+              startOnView={false}
+            >
+              Lorem ipsum dolor sit amet consectetur adipisicing elit. Dicta placeat rerum obcaecati sapiente similique? Velit magni a adipisci, fuga illum temporibus officiis autem minus veniam aperiam ratione, possimus sunt quisquam!
+              Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis aliquam voluptates facere corrupti dolores omnis at repudiandae explicabo expedita ex quae, ipsum incidunt odio aspernatur beatae blanditiis corporis. Ratione, quisquam!
+              Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis aliquam voluptates facere corrupti dolores omnis at repudiandae explicabo expedita ex quae, ipsum incidunt odio aspernatur beatae blanditiis corporis. Ratione, quisquam!
+              Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis aliquam voluptates facere corrupti dolores omnis at repudiandae explicabo expedita ex quae, ipsum incidunt odio aspernatur beatae blanditiis corporis. Ratione, quisquam!
+
+            </TypingAnimation>
+          </div>
         </div>
 
 
@@ -153,6 +164,7 @@ export default function Home() {
                 <div className="flex flex-col justify-between items-start w-full h-full">
                   <a className="text-[12px] text-neutral-200">{audioRef.current?.title}</a>
                   <input type="range" min={0} max={100} value={progress} className={`${styles.slider} w-full`}
+                    onChange={(e) => handleChangeProgress(e)}
                     style={{
                       background: `linear-gradient(to right, white ${progress}%, #404040 ${progress}%)`,
 
