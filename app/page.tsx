@@ -101,7 +101,7 @@ export default function Home() {
       <span>
         <Image src={loni} alt="background" className="absolute inset-0 object-cover w-full h-full z-0" />
       </span>
-      <span className="absolute left-0 bottom-0 object-cover w-full h-[20dvh] z-0 bg-gradient-to-t from-white/70 to-transparent z-10"></span>
+      <span className="absolute left-0 bottom-0 object-cover w-full h-[20dvh] z-0 bg-gradient-to-t from-white/70 to-transparent z-10 pointer-events-none"></span>
 
 
       <div className="relative flex flex-col  justify-between items-center w-screen h-dvh p-4 md:p-8 text-neutral-100">
@@ -163,7 +163,7 @@ export default function Home() {
               {/* <source src="/yellow.mp3" type="audio/mpeg" />
               Your browser does not support the audio element. */}
               <div className="flex justify-between items-center gap-4 w-full max-w-[300px] ">
-                <div className="rounded-full border border-[0.8px] border-neutral-400 p-2 mt-2 mb-1" onClick={handleTogglePlay}>
+                <div className="rounded-full  border-[0.8px] border-neutral-400 p-2 mt-2 mb-1" onClick={handleTogglePlay}>
                   {isPlaying ? <Pause fill="black" size={16} /> : <Play fill="black" size={16} />}
                 </div>
                 <div className="flex flex-col justify-between items-start w-full h-full">
@@ -207,12 +207,12 @@ export default function Home() {
           </div>
 
           {/* Music Player */}
-          <div className="flex md:hidden justify-center text-black w-full">
+          <div className="flex md:hidden justify-center text-black w-full z-[9999]">
 
-            <audio ref={audioRef} src="/yellow.mp3" title="Yellow by Coldplay" onTimeUpdate={handleProgressUpdate} />
+            <audio ref={audioRef} src="/yellow.mp3" title="Yellow by Coldplay" onTimeUpdate={handleProgressUpdate} className="" />
             {/* <source src="/yellow.mp3" type="audio/mpeg" />
               Your browser does not support the audio element. */}
-            <div className="flex justify-between items-center gap-4 w-full  ">
+            <div className="flex justify-between items-center gap-4 w-full z-[9999] ">
               <div className="rounded-full border border-[0.8px] border-neutral-400 p-2 mt-2 mb-1" onClick={handleTogglePlay}>
                 {isPlaying ? <Pause fill="black" size={16} /> : <Play fill="black" size={16} />}
               </div>
