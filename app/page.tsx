@@ -59,14 +59,15 @@ export default function Home() {
     }
     setIsPlaying(!isPlaying)
   }
-
   const handleProgressUpdate = () => {
-    if (!audioRef) return
+    if (!audioRef.current) return;
 
-    const currTime = audioRef.current?.currentTime ?? 0
-    const totalTime = audioRef.current?.duration ?? 0
-    setProgress(currTime / totalTime * 100)
-  }
+    const { currentTime, duration } = audioRef.current;
+
+    if (!Number.isFinite(duration) || duration === 0) return;
+
+    setProgress((currentTime / duration) * 100);
+  };
 
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -79,22 +80,26 @@ export default function Home() {
 
 
 
-  const handleChangeProgress = (e) => {
-    if (!audioRef) return
+  const handleChangeProgress = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (!audioRef.current) return;
 
-    const time = Number(e.target.value)
+    const value = Number(e.target.value);
+    const duration = audioRef.current.duration;
 
-    setProgress(time)
-  }
+    if (!Number.isFinite(duration)) return;
 
-
+    audioRef.current.currentTime = (value / 100) * duration;
+    setProgress(value);
+  };
 
 
   return (
     <div className="w-screen h-dvh overflow-hidden">
 
       <span>
-        <Image src={loni} alt="background" className="absolute inset-0 object-cover w-full h-dvh z-0" />
+        <Image src={loni} alt="background" className="absolute inset-0 object-cover w-full h-full z-0" />
       </span>
       <span className="absolute left-0 bottom-0 object-cover w-full h-[20dvh] z-0 bg-gradient-to-t from-white/70 to-transparent z-10"></span>
 
@@ -163,8 +168,7 @@ export default function Home() {
                 </div>
                 <div className="flex flex-col justify-between items-start w-full h-full">
                   <a className="text-[12px] text-neutral-200">{audioRef.current?.title}</a>
-                  <input type="range" min={0} max={100} value={progress} className={`${styles.slider} w-full`}
-                    onChange={(e) => handleChangeProgress(e)}
+                  <input type="range" min={0} max={100} onChange={(e) => handleChangeProgress(e)} value={progress} className={`${styles.slider} w-full z-100`}
                     style={{
                       background: `linear-gradient(to right, white ${progress}%, #404040 ${progress}%)`,
 
@@ -214,7 +218,7 @@ export default function Home() {
               </div>
               <div className="flex flex-col justify-between items-start w-full h-full">
                 <a className="text-[12px] text-neutral-200">{audioRef.current?.title}</a>
-                <input type="range" min={0} max={100} value={progress} className={`${styles.slider} w-full`}
+                <input type="range" min={0} max={100} onChange={(e) => handleChangeProgress(e)} value={progress} className={`${styles.slider} w-full`}
                   style={{
                     background: `linear-gradient(to right, white ${progress}%, #404040 ${progress}%)`,
 
