@@ -68,7 +68,7 @@ export default function Home() {
 
     setProgress((currentTime / duration) * 100);
 
-    const current = Number(currentTime / 60).toFixed(2)
+    const current = Number((currentTime / 60).toFixed(2))
     setCurrTime(current)
   };
 
@@ -145,7 +145,7 @@ export default function Home() {
     if (!audioRef.current) return
 
     setAudioTitle(audioRef.current.title)
-    const duration = Number(audioRef.current?.duration / 60).toFixed(2)
+    const duration = Number((audioRef.current?.duration / 60).toFixed(2))
     setAudioDuration(duration)
 
   }
