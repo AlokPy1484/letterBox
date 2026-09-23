@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Noise from "@/components/Noise";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,7 +24,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="relative min-h-full flex flex-col">
+        <Noise
+          patternSize={250}
+          patternScaleX={2}
+          patternScaleY={2}
+          patternRefreshInterval={12}
+          patternAlpha={20}
+
+        />
+        {children}</body>
     </html>
   );
 }

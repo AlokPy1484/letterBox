@@ -1,5 +1,4 @@
 "use client"
-
 import Image from "next/image";
 import background from "../public/02-real.png"
 import prop from "../public/01.avif"
@@ -116,8 +115,7 @@ export default function Home() {
   const [typingComplete, setTypingComplete] = useState(false)
   const [typingKey, setTypingKey] = useState(0)
 
-  const text = "Lorem ipsum dolor sit amet consectetur adipisicing elit. Dicta placeat rerum obcaecati sapiente similique? Velit magni a adipisci, fuga illum temporibus officiis autem minus veniam aperiam ratione, possimus sunt quisquam! Lorem ipsum dolor sit amet consectetur adipisicing elit.Perferendis aliquam voluptates facere corrupti dolores omnis at repudiandae explicabo expedita ex quae, ipsum incidunt odio aspernatur beatae blanditiis corporis.Ratione, quisquam! Lorem ipsum dolor sit amet consectetur adipisicing elit.Perferendis aliquam voluptates facere corrupti dolores omnis at repudiandae explicabo expedita ex quae, ipsum incidunt odio aspernatur beatae blanditiis corporis.Ratione, quisquam! Lorem ipsum dolor sit amet consectetur adipisicing elit.Perferendis aliquam voluptates facere corrupti dolores omnis at repudiandae explicabo expedita ex quae, ipsum incidunt odio aspernatur beatae blanditiis corporis.Ratione, quisquam!"
-
+  const text = "Letter Box is a digital letter-sending platform inspired by typo.love, created for moments that deserve more than a simple text message. It allows you to turn your thoughts, memories, and emotions into beautifully designed digital letters that feel personal and meaningful. Instead of sending another ordinary message, Letter Box gives you a space to express yourself through carefully crafted visuals, typography, music, images, and words. Each letter is designed to reflect the care, warmth, and emotion behind your message, making the experience feel closer to receiving a handwritten letter. Whether it’s a birthday, confession, thank-you, apology, or simply a reminder that someone matters, Letter Box makes every message feel special, intimate, and memorable."
   // const text = "Hello World"
 
   const handleRestartTyping = () => {
@@ -183,14 +181,14 @@ export default function Home() {
 
       <div className="relative flex flex-col  justify-between items-center w-screen h-dvh p-4 md:p-8 text-neutral-100">
 
-        <Noise
+        {/* <Noise
           patternSize={250}
           patternScaleX={2}
           patternScaleY={2}
           patternRefreshInterval={12}
           patternAlpha={20}
 
-        />
+        /> */}
 
         <div className="flex justify-between items-center w-full text-xs  z-10 py-4">
           <a className="flex justify-center items-center gap-2 bg-orange-400/40 p-1 rounded-xl">
