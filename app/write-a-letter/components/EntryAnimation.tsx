@@ -22,6 +22,7 @@ export default function EntryAnimation({ children, className, ...props }: { chil
                 duration: 0.6,
                 ease: "easeInOut"
             }}>
+
             {children}
         </motion.div>
     )

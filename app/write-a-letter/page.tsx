@@ -6,19 +6,46 @@ import stamp from "@/public/stamp.png"
 import stamp2 from "@/public/stamp2.png"
 import stamp3 from "@/public/stamp3.png"
 import NotebookBackground from "./components/PageBackground";
-import { useEffect, useRef, useState } from "react";
-import { TypingAnimation } from "@/components/ui/typing-animation";
+import React, { useEffect, useRef, useState } from "react";
 import EntryAnimation from "./components/EntryAnimation";
+import { createClient } from "@/lib/supabase/client";
+
 
 
 export default function page() {
 
 
-    const [visibleQuestion, setVisibleQuestion] = useState(-1)
-    const [username, setUsername] = useState<string | null>(null)
-    const [recipient, setRecipient] = useState<string | null>(null)
-    const [theme, setTheme] = useState<number | null>(null)
-    const [message, setMessage] = useState<string | null>(null)
+    type LetterData = {
+        userName: string,
+        recipientName: string,
+        themeKey: string,
+        message: string
+    }
+
+
+
+    //question render controller
+    const [currentStep, setCurrentStep] = useState<number>(0)
+
+    const showStep = (step: number) => {
+        return currentStep >= step
+    }
+
+    const nextStep = () => {
+        setCurrentStep(prev => prev + 1)
+        console.log(currentStep)
+    }
+
+
+    const [letterData, setLetterData] = useState<LetterData | null>(null)
+
+
+    const updateLetter = <K extends keyof LetterData>(key: K, value: LetterData[K]) => {
+        setLetterData(prev => ({
+            ...(prev || {}),
+            [key]: value
+        }))
+    }
 
 
     const containerRef = useRef<HTMLDivElement>(null)
@@ -42,6 +69,39 @@ export default function page() {
     }, [])
 
 
+    const demoLetterData: LetterData = {
+        userName: "Alok",
+        recipientName: "Sarah",
+        message: "Happy Birthday ❤️",
+        themeKey: "aura",
+    };
+
+
+    const handleFormSubmit = async () => {
+
+        const supabase = createClient();
+
+        const { data, error } = await supabase
+            .from("letters")
+            .insert({
+                sender_name: demoLetterData.userName,
+                recipient_name: demoLetterData.recipientName,
+                theme: demoLetterData.themeKey,
+                message: demoLetterData.message
+            })
+            .select()
+            .single()
+
+        if (error) {
+            console.error(error)
+            return
+        }
+
+        console.log(data)
+
+    }
+
+
     return (
         <div ref={containerRef} className="relative flex justify-center items-start w-screen h-screen overflow-scroll bg-orange-200 font-sans">
             <div className="fixed top-0 left-[50%] translate-x-[-50%] flex justify-center w-full backdrop-blur-lg absolute">
@@ -49,17 +109,17 @@ export default function page() {
                     <a className="p-2 rounded-2xl">Letter Box</a>
                     <div className="relative w-full h-1 rounded-full  bg-amber-800/50">
                         <span
-                            style={{ width: `${(visibleQuestion / 4) * 100}%` }}
-                            className="absolute inset-0 rounded-full bg-amber-800"></span>
+                            style={{ width: `${(currentStep / 5) * 100}%` }}
+                            className="absolute inset-0 rounded-full bg-amber-800 transition-all duration-300 ease-in-out"></span>
                     </div>
                 </h1>
             </div>
             <div className="flex flex-col justify-start items-center max-w-4xl w-full h-full ">
 
                 {/* INTRODUCTORY PHRASE */}
-                {visibleQuestion >= -1 &&
+                {showStep(0) &&
 
-                    <EntryAnimation onAnimationComplete={() => { setVisibleQuestion(0) }} className="" >
+                    <EntryAnimation onAnimationComplete={nextStep} className="" >
                         <div >
                             <div className="flex text-3xl mt-24 font-medium">
                                 👋 Welcome to LetterBox, a little place on the internet where you can create and send thoughtful digital letters.
@@ -71,43 +131,42 @@ export default function page() {
                         </div>
                     </EntryAnimation>}
 
+
                 <div className="flex flex-col justify-start items-start w-full mt-8 gap-2 ">
                     {/* Question 1 */}
 
-                    {visibleQuestion >= 0 &&
+                    {showStep(1) &&
                         <EntryAnimation className="flex flex-col justify-start items-start w-full gap-2 ">
-                            <div className="flex flex-col justify-start items-start w-full gap-2 ">
-                                <div className="px-4 py-2 rounded-2xl text-2xl bg-amber-100 ">
-                                    What should I call you ?
-                                </div>
-                                <UserAnswerBox setVisibleQuestion={setVisibleQuestion} setAnswer={setUsername} />
-                            </div>
+
+                            <QuestionDialogChat nextStep={nextStep} onChange={(e) => updateLetter("userName", e)}>
+                                What should I call you ?
+                            </QuestionDialogChat>
+
                         </EntryAnimation>}
 
 
                     {/* Question 2 */}
-                    {visibleQuestion >= 1 &&
+                    {showStep(2) &&
                         <EntryAnimation className="flex flex-col justify-start items-start w-full gap-2 ">
-                            <div className="px-4 py-2 rounded-2xl text-2xl bg-amber-100 ">
-                                Hello {username} 😊
-                            </div>
-                            <div className="px-4 py-2 rounded-2xl text-2xl bg-amber-100 ">
+                            <QuestionChat>
+                                Hello {letterData?.userName} 😊
+                            </QuestionChat>
+                            <QuestionDialogChat nextStep={nextStep} onChange={(e) => updateLetter("recipientName", e)}>
                                 This letter is dedicated to whome ?
-                            </div>
-                            <UserAnswerBox setVisibleQuestion={setVisibleQuestion} setAnswer={setRecipient} />
+                            </QuestionDialogChat>
                         </EntryAnimation>}
 
                 </div>
 
                 {/* Question 3 */}
-                {visibleQuestion >= 2 &&
-                    <EntryAnimation className="">
-                        <div>
-                            <div className="text-2xl mt-8">
-                                Pick a theme for your letter, It will shape the mood, colors, and atmosphere of your message, helping us turn your thoughts into something memorable, personal, and meaningful to keep.
-                            </div>
+                {showStep(3) &&
+                    <EntryAnimation className="w-full">
+                        <div className="flex flex-col items-start justify-start gap-4 w-full mt-8">
+                            <QuestionChat>
+                                Pick a theme for your letter {letterData?.recipientName}, It will shape the mood, colors, and atmosphere of your message, helping us turn your thoughts into something memorable, personal, and meaningful to keep.
+                            </QuestionChat>
                             <div className="flex justify-center theme-selector-container w-full mt-16">
-                                <ThemeSelectorCard setTheme={setTheme} setVisibleQuestion={setVisibleQuestion} />
+                                <ThemeSelectorCard onChange={(value) => updateLetter("themeKey", value)} nextStep={nextStep} />
                             </div>
                         </div>
                     </EntryAnimation>
@@ -115,7 +174,7 @@ export default function page() {
 
 
                 {/* Question 4 */}
-                {visibleQuestion >= 3 &&
+                {showStep(4) &&
                     <EntryAnimation className=" flex flex-col justify-center items-end w-full gap-2 mt-24 ">
                         <div className="text-2xl mt-8">
                             Pick a theme for your letter, It will shape the mood, colors, and atmosphere of your message, helping us turn your thoughts into something memorable, personal, and meaningful to keep.
@@ -127,7 +186,7 @@ export default function page() {
                         </div>
 
                         {/* Submit Button */}
-                        <button className="translate-y-[-100px] flex items-center px-4 py-2 rounded-2xl text-2xl bg-amber-100 mt-10 gap-4">
+                        <button onClick={handleFormSubmit} className="translate-y-[-100px] flex items-center px-4 py-2 rounded-2xl text-2xl bg-amber-100 mt-10 gap-4">
                             <Send strokeWidth={1.5} size={20} />
                             Render Letter
                         </button>
@@ -144,17 +203,40 @@ export default function page() {
 
 
 
-export function UserAnswerBox({ setVisibleQuestion, setAnswer }: { setVisibleQuestion: (value: number) => void, setAnswer: (value: string) => void }) {
+export function QuestionDialogChat({ children, nextStep, onChange }: { children: React.ReactNode }) {
 
-    const handleSend = () => {
-        setVisibleQuestion((prev) => (prev + 1))
+    const handleSubmit = () => {
+        nextStep()
     }
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            handleSubmit()
+        }
+    }
+
+
     return (
-        <div className="flex justify-end w-full">
-            <div className="flex items-center px-4 py-2 rounded-2xl text-2xl bg-amber-100 ">
-                <input type="text" className="appearance-none border-0 outline-none w-full text-left" onChange={(e) => { setAnswer(e.target.value) }} />
-                <SendHorizontal strokeWidth={1.5} size={20} onClick={handleSend} />
+        <div className="flex flex-col justify-start items-start w-full gap-2 ">
+            <div className="px-4 py-2 rounded-2xl text-2xl bg-amber-100 ">
+                {children}
+            </div>
+            <div className="flex justify-end w-full">
+                <div className="flex items-center px-4 py-2 rounded-2xl text-2xl bg-amber-100 ">
+                    <input type="text" className="appearance-none border-0 outline-none w-full text-left" onKeyDown={handleKeyDown} onChange={(e) => onChange(e.target.value)} />
+                    <SendHorizontal strokeWidth={1.5} size={20} onClick={handleSubmit} />
+                </div>
+            </div>
+        </div>
+    )
+}
+
+
+export function QuestionChat({ children }: { children: React.ReactNode }) {
+    return (
+        <div className="flex justify-start w-full">
+            <div className="px-4 py-2 rounded-2xl text-2xl bg-amber-100 max-w-2xl">
+                {children}
             </div>
         </div>
     )
@@ -163,11 +245,11 @@ export function UserAnswerBox({ setVisibleQuestion, setAnswer }: { setVisibleQue
 
 
 
-export function ThemeSelectorCard({ setTheme, setVisibleQuestion }: { setTheme: (value: string) => void, setVisibleQuestion: (value: number) => void }) {
+export function ThemeSelectorCard({ onChange, nextStep }: { onChange: (value: number) => void, setVisibleQuestion: (value: number) => void }) {
 
     const handleClick = (idx: number) => {
-        setTheme(idx)
-        setVisibleQuestion((prev) => (prev + 1))
+        onChange(idx)
+        nextStep()
 
     }
 
@@ -210,3 +292,14 @@ export function ThemeSelectorCard({ setTheme, setVisibleQuestion }: { setTheme: 
         </div>
     )
 }
+
+
+
+
+// @LetterBox1483@
+
+//SupaBaseProjectKey: 
+//https://yvtlyewemactgoxinpsj.supabase.co
+
+//SupaBasePublishableKey: 
+// sb_publishable_jsNXhvFt3rQd0YHz_WVdZA_napdY9H-
