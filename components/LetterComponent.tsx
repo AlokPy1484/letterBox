@@ -4,7 +4,7 @@ import background from "../public/02-real.png"
 import prop from "../public/01.avif"
 import loni from "../public/03-loni.jpeg"
 import loni2 from "../public/04-loni.jpeg"
-import { MoveLeft, MoveRight, Pause, Play, Speaker, Volume2, VolumeX } from "lucide-react";
+import { Bookmark, BookMarked, Home, MoveLeft, MoveRight, Pause, Play, Speaker, Volume2, VolumeX } from "lucide-react";
 import { TypingAnimation } from "@/components/ui/typing-animation"
 import { AnimatePresence, motion, scale } from "motion/react"
 import styles from "../components/AudioPlayer/AudioPlayer.module.css"
@@ -12,9 +12,7 @@ import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState } from "react";
 
 
-
-
-export default function Letter({ message, backgroundImage, secImage, textHighlight, letterData }: { message: string, backgroundImage: StaticImageData, secImage: StaticImageData, textHighlight: string }) {
+export default function Letter({ message, backgroundImage, secImage, textHighlight, letterData, themeSong }: { message: string, backgroundImage: string, secImage: string, textHighlight: string, themeSong: string }) {
 
 
     const parentVariants = {
@@ -122,15 +120,15 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
 
     }
 
-    useEffect(() => {
-        const typeSpeed = 75
+    // useEffect(() => {
+    //     const typeSpeed = 75
 
-        const timer = setTimeout(() => {
-            setTypingComplete(true)
-        }, (letterData.message.length * typeSpeed) + 300)
+    //     const timer = setTimeout(() => {
+    //         setTypingComplete(true)
+    //     }, (letterData.message.length * typeSpeed) + 300)
 
-        return () => clearTimeout(timer)
-    }, [handleRestartTyping])
+    //     return () => clearTimeout(timer)
+    // }, [handleRestartTyping])
 
 
     const [audioTitle, setAudioTitle] = useState<string | null>()
@@ -172,7 +170,7 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
         <div className="w-screen h-dvh overflow-hidden">
 
             <span>
-                <Image src={backgroundImage} alt="background" className="absolute inset-0 object-cover w-full h-full z-0" />
+                <Image src={backgroundImage} alt="background" className="absolute inset-0 object-cover w-full h-full z-0" width={1920} height={1080} unoptimized />
             </span>
             <span className="absolute left-0 bottom-0 object-cover w-full h-[20dvh] z-0 bg-gradient-to-t from-white/70 to-transparent z-10 pointer-events-none"></span>
 
@@ -189,13 +187,21 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
         /> */}
 
                 <div className="flex justify-between items-center w-full text-xs  z-10 py-4">
-                    <a className="flex justify-center items-center gap-2 bg-orange-400/40 p-1 rounded-xl">
-                        <MoveLeft strokeWidth={1} size={16} />
-                        PREVIOUS LETTER
+                    <a
+                        style={{
+                            backgroundColor: textHighlight
+                        }}
+                        className="flex justify-center items-center gap-2  px-2 p-1 rounded-xl uppercase">
+                        <Home strokeWidth={1} size={16} />
+                        Return Home
                     </a>
-                    <a className="flex justify-center items-center gap-2 bg-orange-400/40 p-1 rounded-xl">
-                        NEXT LETTER
-                        <MoveRight strokeWidth={1} size={16} />
+                    <a
+                        style={{
+                            backgroundColor: textHighlight
+                        }}
+                        className="flex justify-center items-center gap-2 px-2 p-1 rounded-xl uppercase">
+                        Archive Letter
+                        <Bookmark strokeWidth={1} size={16} />
                     </a>
                 </div>
 
@@ -217,6 +223,7 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
                             onAnimationComplete={() => setTypingComplete(true)}
                         >
                             {letterData.message}
+
                         </TypingAnimation>
                         {typingComplete &&
                             <button className="text-sm bg-orange-500 px-4 p-2 rounded-md text-neutral-700 mx-1 my-6 cursor-pointer" onClick={handleRestartTyping}>Play again</button>}
@@ -226,7 +233,7 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
 
                 <div className="flex flex-col justify-end items-between gap-8 w-full">
                     <div className="flex justify-between items-end w-full text-xs z-10">
-                        <span className="flex flex-col justify-center items-start uppercase">
+                        <span className="flex flex-col justify-center items-start uppercase whitespace-nowrap">
                             <a>TO: {letterData.recipient}</a>
                             <a>FROM: {letterData.userName}</a>
                             <a>SUMITTED: {letterData.date}</a>
@@ -235,7 +242,7 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
                         {/* Music Player */}
                         <div className="hidden md:flex justify-center text-black w-full">
 
-                            <audio ref={audioRef} src="/yellow.mp3" title="Yellow by Coldplay" onTimeUpdate={handleProgressUpdate} />
+                            <audio ref={audioRef} src={themeSong} title="Yellow by Coldplay" onTimeUpdate={handleProgressUpdate} />
                             {/* <source src="/yellow.mp3" type="audio/mpeg" />
               Your browser does not support the audio element. */}
                             <div className="flex justify-between items-center gap-4 w-full max-w-[300px] ">
@@ -278,7 +285,7 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
                             <AnimatePresence>
                                 <motion.div className="absolute bottom-34 right-0 flex flex-col justify-center items-center gap-4 bg-neutral-200 p-4 "
                                     variants={childVariants}>
-                                    <Image src={secImage} alt="postal image" className="object-cover min-w-[180px] z-[9999] " />
+                                    <Image src={secImage} alt="postal image" width={1000} height={1000} className="object-cover min-w-[180px] z-[9999]" unoptimized />
                                     <a className="text-neutral-900 flex justify-center w-full pt-2">Loni Kalbhor</a>
                                 </motion.div>
                             </AnimatePresence>
@@ -289,7 +296,7 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
                     {/* Music Player */}
                     <div className="flex md:hidden justify-center text-black w-full z-[9999]">
 
-                        <audio ref={audioRef} src="/yellow.mp3" title="Yellow by Coldplay" onTimeUpdate={handleProgressUpdate} className="" />
+                        <audio ref={audioRef} src={themeSong} title="Yellow by Coldplay" onTimeUpdate={handleProgressUpdate} className="" />
                         {/* <source src="/yellow.mp3" type="audio/mpeg" />
               Your browser does not support the audio element. */}
                         <div className="flex justify-between items-center gap-4 w-full z-[9999] ">
@@ -315,7 +322,7 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
                 </div>
 
             </div>
-        </div>
+        </div >
     )
 }
 

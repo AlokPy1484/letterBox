@@ -14,14 +14,14 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function page() {
 
-
     type LetterData = {
+        id: string,
+        slug: string,
         userName: string,
         recipientName: string,
         themeKey: string,
         message: string
     }
-
 
 
     //question render controller
@@ -37,7 +37,15 @@ export default function page() {
     }
 
 
-    const [letterData, setLetterData] = useState<LetterData | null>(null)
+
+    const [letterData, setLetterData] = useState<LetterData>(() => ({
+        id: crypto.randomUUID(),
+        slug: crypto.randomUUID().slice(0, 8),
+        userName: "",
+        recipientName: "",
+        themeKey: "",
+        message: ""
+    }))
 
 
     const updateLetter = <K extends keyof LetterData>(key: K, value: LetterData[K]) => {
@@ -70,30 +78,38 @@ export default function page() {
 
 
     const demoLetterData: LetterData = {
+        id: "550e8400-e29b-41d4-b716-446651440000",
+        slug: "3487gfi34b934",
         userName: "Alok",
         recipientName: "Sarah",
         message: "Happy Birthday ❤️",
         themeKey: "aura",
     };
 
-
     const handleFormSubmit = async () => {
 
+
+        console.log("Real FORM data: ", letterData)
+
         const supabase = createClient();
+
+        console.log("Running...")
 
         const { data, error } = await supabase
             .from("letters")
             .insert({
-                sender_name: demoLetterData.userName,
-                recipient_name: demoLetterData.recipientName,
-                theme: demoLetterData.themeKey,
-                message: demoLetterData.message
+                id: letterData.id,
+                slug: letterData.slug,
+                sender_name: letterData?.userName,
+                recipient_name: letterData?.recipientName,
+                theme: letterData?.themeKey,
+                message: letterData?.message
             })
             .select()
             .single()
 
         if (error) {
-            console.error(error)
+            console.error("Error Hai: " + error.message)
             return
         }
 
@@ -181,7 +197,7 @@ export default function page() {
                         </div>
                         <div className="flex justify-center w-full  ">
                             <NotebookBackground className="px-10 py-8 rounded-2xl mt-4 ">
-                                <textarea className="w-full h-[400px] outline-none" />
+                                <textarea onChange={(e) => updateLetter("message", e.target.value)} className="w-full h-[400px] outline-none" />
                             </NotebookBackground>
                         </div>
 
@@ -243,12 +259,25 @@ export function QuestionChat({ children }: { children: React.ReactNode }) {
 }
 
 
-
-
 export function ThemeSelectorCard({ onChange, nextStep }: { onChange: (value: number) => void, setVisibleQuestion: (value: number) => void }) {
 
+    const themeList = [
+        {
+            name: "Yellow"
+        },
+        {
+            name: "Blue"
+        },
+        {
+            name: "Green"
+        },
+        {
+            name: "Red"
+        }
+    ]
+
     const handleClick = (idx: number) => {
-        onChange(idx)
+        onChange(themeList[idx].name)
         nextStep()
 
     }
