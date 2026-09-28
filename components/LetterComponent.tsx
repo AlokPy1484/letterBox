@@ -10,9 +10,10 @@ import { AnimatePresence, motion, scale } from "motion/react"
 import styles from "../components/AudioPlayer/AudioPlayer.module.css"
 import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState } from "react";
+import { LetterDataType } from "@/app/types/letters";
 
 
-export default function Letter({ message, backgroundImage, secImage, textHighlight, letterData, themeSong }: { message: string, backgroundImage: string, secImage: string, textHighlight: string, themeSong: string }) {
+export default function Letter({ backgroundImage, secImage, textHighlight, letterData, themeSong }: { backgroundImage: string, secImage: string, textHighlight: string, themeSong: string, letterData: LetterDataType }) {
 
 
     const parentVariants = {
@@ -35,6 +36,65 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
             display: "block"
         }
     }
+
+    type LetterThemeType = {
+        id: string,
+        name: string,
+        backgroundImage: string,
+        secImage: string,
+        textHighlight: string,
+        themeSong: string
+    }
+
+    const letterThemes: LetterThemeType[] = [
+        {
+            id: "Yellow",
+            name: "Default",
+            backgroundImage: "../themes/defaultBg.jpeg",
+            secImage: "/themes/defaultImage.jpeg",
+            textHighlight: "oklch(75% 0.183 55.934 / 0.5)",
+            themeSong: "../themes/defaultAudio.mp3"
+        },
+        {
+            id: "Blue",
+            name: "Default",
+            backgroundImage: "https://placehold.co/1440x900?text=Blue+Background",
+            secImage: "https://placehold.co/200x180?text=Blue+Sec+Image",
+            textHighlight: "oklch(75% 0.12 240 / 0.5)",
+            themeSong: "/themes/defaultAudio.mp3"
+        },
+        {
+            id: "Green",
+            name: "Default",
+            backgroundImage: "https://placehold.co/1440x900?text=Green+Background",
+            secImage: "https://placehold.co/200x180?text=Green+Sec+Image",
+            textHighlight: "oklch(75% 0.12 145 / 0.5)",
+            themeSong: "/themes/defaultAudio.mp3"
+        },
+        {
+            id: "Red",
+            name: "Default",
+            backgroundImage: "https://placehold.co/1440x900?text=Red+Background",
+            secImage: "https://placehold.co/200x180?text=Red+Sec+Image",
+            textHighlight: "oklch(75% 0.14 25 / 0.5)",
+            themeSong: "/themes/defaultAudio.mp3"
+        },
+        {
+            id: "Demo",
+            name: "Default",
+            backgroundImage: "https://placehold.co/1440x900?text=Demo+Background",
+            secImage: "https://placehold.co/200x180?text=Demo+Sec+Image",
+            textHighlight: "oklch(75% 0.14 25 / 0.5)",
+            themeSong: "/themes/defaultAudio.mp3"
+        }
+    ]
+
+    const [themeState, setThemeState] = useState<LetterThemeType>(letterThemes[4])
+
+    useEffect(() => {
+        setThemeState(letterThemes.find(t => t.id === letterData?.theme) || letterThemes[2])
+    }, [letterData])
+
 
     const audioRef = useRef<HTMLAudioElement>(null)
 
@@ -170,7 +230,7 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
         <div className="w-screen h-dvh overflow-hidden">
 
             <span>
-                <Image src={backgroundImage} alt="background" className="absolute inset-0 object-cover w-full h-full z-0" width={1920} height={1080} unoptimized />
+                <Image src={themeState?.backgroundImage} alt="background" className="absolute inset-0 object-cover w-full h-full z-0" width={1920} height={1080} unoptimized />
             </span>
             <span className="absolute left-0 bottom-0 object-cover w-full h-[20dvh] z-0 bg-gradient-to-t from-white/70 to-transparent z-10 pointer-events-none"></span>
 
@@ -189,7 +249,7 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
                 <div className="flex justify-between items-center w-full text-xs  z-10 py-4">
                     <a
                         style={{
-                            backgroundColor: textHighlight
+                            backgroundColor: themeState?.textHighlight
                         }}
                         className="flex justify-center items-center gap-2  px-2 p-1 rounded-xl uppercase">
                         <Home strokeWidth={1} size={16} />
@@ -197,7 +257,7 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
                     </a>
                     <a
                         style={{
-                            backgroundColor: textHighlight
+                            backgroundColor: themeState?.textHighlight
                         }}
                         className="flex justify-center items-center gap-2 px-2 p-1 rounded-xl uppercase">
                         Archive Letter
@@ -216,7 +276,7 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
                             key={typingKey}
                             className="inline  rounded-sm px-2 py-1 leading-[2.6rem] [box-decoration-break:clone] [-webkit-box-decoration-break:clone] z-100"
                             style={{
-                                backgroundColor: textHighlight
+                                backgroundColor: themeState?.textHighlight
                             }}
                             typeSpeed={75}
                             startOnView={false}
@@ -234,15 +294,15 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
                 <div className="flex flex-col justify-end items-between gap-8 w-full">
                     <div className="flex justify-between items-end w-full text-xs z-10">
                         <span className="flex flex-col justify-center items-start uppercase whitespace-nowrap">
-                            <a>TO: {letterData.recipient}</a>
-                            <a>FROM: {letterData.userName}</a>
-                            <a>SUMITTED: {letterData.date}</a>
+                            <a>TO: {letterData.recipient_name}</a>
+                            <a>FROM: {letterData.sender_name}</a>
+                            <a>SUMITTED: {letterData.created_at}</a>
                         </span>
 
                         {/* Music Player */}
                         <div className="hidden md:flex justify-center text-black w-full">
 
-                            <audio ref={audioRef} src={themeSong} title="Yellow by Coldplay" onTimeUpdate={handleProgressUpdate} />
+                            <audio ref={audioRef} src={themeState?.themeSong} title="Yellow by Coldplay" onTimeUpdate={handleProgressUpdate} />
                             {/* <source src="/yellow.mp3" type="audio/mpeg" />
               Your browser does not support the audio element. */}
                             <div className="flex justify-between items-center gap-4 w-full max-w-[300px] ">
@@ -285,7 +345,7 @@ export default function Letter({ message, backgroundImage, secImage, textHighlig
                             <AnimatePresence>
                                 <motion.div className="absolute bottom-34 right-0 flex flex-col justify-center items-center gap-4 bg-neutral-200 p-4 "
                                     variants={childVariants}>
-                                    <Image src={secImage} alt="postal image" width={1000} height={1000} className="object-cover min-w-[180px] z-[9999]" unoptimized />
+                                    <Image src={themeState?.secImage} alt="postal image" width={1000} height={1000} className="object-cover min-w-[180px] z-[9999]" unoptimized />
                                     <a className="text-neutral-900 flex justify-center w-full pt-2">Loni Kalbhor</a>
                                 </motion.div>
                             </AnimatePresence>

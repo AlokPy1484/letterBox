@@ -9,20 +9,21 @@ import NotebookBackground from "./components/PageBackground";
 import React, { useEffect, useRef, useState } from "react";
 import EntryAnimation from "./components/EntryAnimation";
 import { createClient } from "@/lib/supabase/client";
+import { LetterData, recipientNameSchema, themeSchema, userNameSchema } from "@/schema/letter";
+import z from "zod"
 
 
 
 export default function page() {
 
-    type LetterData = {
-        id: string,
-        slug: string,
-        userName: string,
-        recipientName: string,
-        themeKey: string,
-        message: string
-    }
-
+    // type LetterData = {
+    //     id: string,
+    //     slug: string,
+    //     userName: string,
+    //     recipientName: string,
+    //     themeKey: string,
+    //     message: string
+    // }
 
     //question render controller
     const [currentStep, setCurrentStep] = useState<number>(0)
@@ -41,9 +42,9 @@ export default function page() {
     const [letterData, setLetterData] = useState<LetterData>(() => ({
         id: crypto.randomUUID(),
         slug: crypto.randomUUID().slice(0, 8),
-        userName: "",
-        recipientName: "",
-        themeKey: "",
+        sender_name: "",
+        recipient_name: "",
+        theme: "",
         message: ""
     }))
 
@@ -53,6 +54,31 @@ export default function page() {
             ...(prev || {}),
             [key]: value
         }))
+    }
+
+    const [errors, setErrors] = useState<Partial<Record<keyof LetterData, string>>>({})
+
+    const validaterField = <K extends keyof LetterData>(
+        key: K,
+        value: LetterData[K],
+        schema: z.ZodType
+    ) => {
+        const result = schema.safeParse(value)
+
+        if (!result.success) {
+            setErrors(prev => ({
+                ...prev, [key]: result.error.issues[0].message
+            }))
+
+            return false
+        }
+
+
+        setErrors(prev => ({
+            ...prev, [key]: undefined
+        }))
+
+        return true
     }
 
 
@@ -80,10 +106,10 @@ export default function page() {
     const demoLetterData: LetterData = {
         id: "550e8400-e29b-41d4-b716-446651440000",
         slug: "3487gfi34b934",
-        userName: "Alok",
-        recipientName: "Sarah",
+        sender_name: "Alok",
+        recipient_name: "Sarah",
         message: "Happy Birthday ❤️",
-        themeKey: "aura",
+        theme: "Yellow",
     };
 
     const handleFormSubmit = async () => {
@@ -100,9 +126,9 @@ export default function page() {
             .insert({
                 id: letterData.id,
                 slug: letterData.slug,
-                sender_name: letterData?.userName,
-                recipient_name: letterData?.recipientName,
-                theme: letterData?.themeKey,
+                sender_name: letterData?.sender_name,
+                recipient_name: letterData?.recipient_name,
+                theme: letterData?.theme,
                 message: letterData?.message
             })
             .select()
@@ -154,9 +180,31 @@ export default function page() {
                     {showStep(1) &&
                         <EntryAnimation className="flex flex-col justify-start items-start w-full gap-2 ">
 
-                            <QuestionDialogChat nextStep={nextStep} onChange={(e) => updateLetter("userName", e)}>
+                            <QuestionDialogChat
+                                onSubmit={(value) => {
+                                    if (!validaterField(
+                                        "sender_name",
+                                        value,
+                                        userNameSchema
+                                    )) {
+                                        return
+                                    }
+
+                                    updateLetter("sender_name", value)
+                                    nextStep()
+                                }}
+                            >
+
                                 What should I call you ?
                             </QuestionDialogChat>
+
+                            {errors.sender_name &&
+                                <EntryAnimation className="flex flex-col justify-start items-start w-full gap-2 ">
+
+                                    <QuestionChat className="text-red-500">
+                                        {errors.sender_name}
+                                    </QuestionChat>
+                                </EntryAnimation>}
 
                         </EntryAnimation>}
 
@@ -165,11 +213,26 @@ export default function page() {
                     {showStep(2) &&
                         <EntryAnimation className="flex flex-col justify-start items-start w-full gap-2 ">
                             <QuestionChat>
-                                Hello {letterData?.userName} 😊
+                                Hello {letterData?.sender_name} 😊
                             </QuestionChat>
-                            <QuestionDialogChat nextStep={nextStep} onChange={(e) => updateLetter("recipientName", e)}>
+                            <QuestionDialogChat onSubmit={(value) => {
+                                if (!validaterField(
+                                    "recipient_name",
+                                    value,
+                                    recipientNameSchema
+                                )) {
+                                    return
+                                }
+
+                                updateLetter("recipient_name", value)
+                                nextStep()
+                            }}>
                                 This letter is dedicated to whome ?
                             </QuestionDialogChat>
+
+
+
+
                         </EntryAnimation>}
 
                 </div>
@@ -179,11 +242,29 @@ export default function page() {
                     <EntryAnimation className="w-full">
                         <div className="flex flex-col items-start justify-start gap-4 w-full mt-8">
                             <QuestionChat>
-                                Pick a theme for your letter {letterData?.recipientName}, It will shape the mood, colors, and atmosphere of your message, helping us turn your thoughts into something memorable, personal, and meaningful to keep.
+                                Pick a theme for your letter {letterData?.recipient_name}, It will shape the mood, colors, and atmosphere of your message, helping us turn your thoughts into something memorable, personal, and meaningful to keep.
                             </QuestionChat>
                             <div className="flex justify-center theme-selector-container w-full mt-16">
-                                <ThemeSelectorCard onChange={(value) => updateLetter("themeKey", value)} nextStep={nextStep} />
+                                <ThemeSelectorCard onSubmit={(value) => {
+                                    if (!validaterField(
+                                        "theme",
+                                        value,
+                                        themeSchema
+                                    )) {
+                                        return
+                                    }
+
+                                    updateLetter("theme", value)
+                                    nextStep()
+                                }} />
                             </div>
+                            {errors.theme &&
+                                <EntryAnimation className="flex flex-col justify-start items-start w-full gap-2 ">
+
+                                    <QuestionChat className="text-red-500">
+                                        {errors.theme}
+                                    </QuestionChat>
+                                </EntryAnimation>}
                         </div>
                     </EntryAnimation>
                 }
@@ -197,12 +278,23 @@ export default function page() {
                         </div>
                         <div className="flex justify-center w-full  ">
                             <NotebookBackground className="px-10 py-8 rounded-2xl mt-4 ">
-                                <textarea onChange={(e) => updateLetter("message", e.target.value)} className="w-full h-[400px] outline-none" />
+                                <textarea className="w-full h-[400px] outline-none" />
                             </NotebookBackground>
                         </div>
 
                         {/* Submit Button */}
-                        <button onClick={handleFormSubmit} className="translate-y-[-100px] flex items-center px-4 py-2 rounded-2xl text-2xl bg-amber-100 mt-10 gap-4">
+                        <button onClick={(value) => {
+                            if (!validaterField(
+                                "message",
+                                value,
+                                messageSchema
+                            )) {
+                                return
+                            }
+
+                            updateLetter("message", value)
+                            nextStep()
+                        }} className="translate-y-[-100px] flex items-center px-4 py-2 rounded-2xl text-2xl bg-amber-100 mt-10 gap-4">
                             <Send strokeWidth={1.5} size={20} />
                             Render Letter
                         </button>
@@ -219,10 +311,12 @@ export default function page() {
 
 
 
-export function QuestionDialogChat({ children, nextStep, onChange }: { children: React.ReactNode }) {
+export function QuestionDialogChat({ onSubmit, children }: { onSubmit: (value: string) => void, children: React.ReactNode }) {
+
+    const [value, setValue] = useState()
 
     const handleSubmit = () => {
-        nextStep()
+        onSubmit(value)
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -232,6 +326,14 @@ export function QuestionDialogChat({ children, nextStep, onChange }: { children:
     }
 
 
+
+    // const result = z
+    //     .string()
+    //     .trim()
+    //     .min(2, "Please enter your name")
+    //     .safeParse(letterData.userName)
+
+
     return (
         <div className="flex flex-col justify-start items-start w-full gap-2 ">
             <div className="px-4 py-2 rounded-2xl text-2xl bg-amber-100 ">
@@ -239,7 +341,7 @@ export function QuestionDialogChat({ children, nextStep, onChange }: { children:
             </div>
             <div className="flex justify-end w-full">
                 <div className="flex items-center px-4 py-2 rounded-2xl text-2xl bg-amber-100 ">
-                    <input type="text" className="appearance-none border-0 outline-none w-full text-left" onKeyDown={handleKeyDown} onChange={(e) => onChange(e.target.value)} />
+                    <input type="text" className="appearance-none border-0 outline-none w-full text-left" onKeyDown={handleKeyDown} onChange={(e) => setValue(e.target.value)} />
                     <SendHorizontal strokeWidth={1.5} size={20} onClick={handleSubmit} />
                 </div>
             </div>
@@ -248,9 +350,9 @@ export function QuestionDialogChat({ children, nextStep, onChange }: { children:
 }
 
 
-export function QuestionChat({ children }: { children: React.ReactNode }) {
+export function QuestionChat({ children, className }: { children: React.ReactNode, className?: string }) {
     return (
-        <div className="flex justify-start w-full">
+        <div className={`flex justify-start w-full ${className}`}>
             <div className="px-4 py-2 rounded-2xl text-2xl bg-amber-100 max-w-2xl">
                 {children}
             </div>
@@ -259,7 +361,7 @@ export function QuestionChat({ children }: { children: React.ReactNode }) {
 }
 
 
-export function ThemeSelectorCard({ onChange, nextStep }: { onChange: (value: number) => void, setVisibleQuestion: (value: number) => void }) {
+export function ThemeSelectorCard({ onSubmit }: { onSubmit: (value: string) => void }) {
 
     const themeList = [
         {
@@ -303,7 +405,7 @@ export function ThemeSelectorCard({ onChange, nextStep }: { onChange: (value: nu
 
                 {[...Array(4)].map((_, idx) => (
                     <div
-                        onClick={() => handleClick(idx)}
+                        onClick={() => onSubmit(themeList[idx].name)}
                         className="group flex justify-start items-center gap-4 w-full p-2 bg-amber-200/30 hover:bg-amber-200/60 rounded-2xl">
                         <div className="p-2 bg-yellow-100 rounded-full">
                             <Flower size={16} className="scale-100 group-hover:scale-120 group-hover:rotate-200 transition-all duration-300 ease-in-out" />
