@@ -16,14 +16,6 @@ import z from "zod"
 
 export default function page() {
 
-    // type LetterData = {
-    //     id: string,
-    //     slug: string,
-    //     userName: string,
-    //     recipientName: string,
-    //     themeKey: string,
-    //     message: string
-    // }
 
     //question render controller
     const [currentStep, setCurrentStep] = useState<number>(0)
@@ -103,14 +95,14 @@ export default function page() {
     }, [])
 
 
-    const demoLetterData: LetterData = {
-        id: "550e8400-e29b-41d4-b716-446651440000",
-        slug: "3487gfi34b934",
-        sender_name: "Alok",
-        recipient_name: "Sarah",
-        message: "Happy Birthday ❤️",
-        theme: "Yellow",
-    };
+    // const demoLetterData: LetterData = {
+    //     id: "550e8400-e29b-41d4-b716-446651440000",
+    //     slug: "3487gfi34b934",
+    //     sender_name: "Alok",
+    //     recipient_name: "Sarah",
+    //     message: "Happy Birthday ❤️",
+    //     theme: "Yellow",
+    // };
 
     const handleFormSubmit = async () => {
 
@@ -326,12 +318,6 @@ export function QuestionDialogChat({ onSubmit, children }: { onSubmit: (value: s
 
 
 
-    // const result = z
-    //     .string()
-    //     .trim()
-    //     .min(2, "Please enter your name")
-    //     .safeParse(letterData.userName)
-
 
     return (
         <div className="flex flex-col justify-start items-start w-full gap-2 ">
@@ -428,8 +414,3 @@ export function ThemeSelectorCard({ onSubmit }: { onSubmit: (value: string) => v
 
 // @LetterBox1483@
 
-//SupaBaseProjectKey: 
-//https://yvtlyewemactgoxinpsj.supabase.co
-
-//SupaBasePublishableKey: 
-// sb_publishable_jsNXhvFt3rQd0YHz_WVdZA_napdY9H-
