@@ -143,7 +143,6 @@ export default function page() {
 
     }
 
-
     return (
         <div ref={containerRef} className="relative flex justify-center items-start w-screen h-screen overflow-scroll bg-orange-200 font-sans">
             <div className="fixed top-0 left-[50%] translate-x-[-50%] flex justify-center w-full backdrop-blur-lg absolute">
