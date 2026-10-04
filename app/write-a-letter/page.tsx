@@ -1,35 +1,60 @@
 "use client"
-import { Bubble, BubbleContent } from "@/components/ui/bubble";
-import { Flower, Send, SendHorizontal } from "lucide-react";
-import Image from "next/image";
-import stamp from "@/public/stamp.png"
-import stamp2 from "@/public/stamp2.png"
-import stamp3 from "@/public/stamp3.png"
-import NotebookBackground from "./components/PageBackground";
-import React, { useEffect, useRef, useState } from "react";
-import EntryAnimation from "./components/EntryAnimation";
-import { createClient } from "@/lib/supabase/client";
-import { LetterData, recipientNameSchema, themeSchema, userNameSchema } from "@/schema/letter";
+
+
+import React, { useCallback, useEffect, useState } from "react"
+import { createClient } from "@/lib/supabase/client"
+import { LetterData, messageSchema, recipientNameSchema, themeSchema, userNameSchema } from "@/schema/letter"
 import z from "zod"
 
+import ChatThread from "./components/ChatThread"
+import ChatComposer from "./components/ChatComposer"
+import MessageBubble from "./components/MessageBubble"
+import ThemeSelector from "./components/ThemeSelector"
+import TypingIndicator from "./components/TypingIndicator"
+
+import EntryAnimation from "./components/EntryAnimation"
 
 
-export default function page() {
+// ─── Conversation step definitions ───────────────────────────────────────────
 
+type Step =
+    | "welcome"
+    | "ask_name"
+    | "ask_recipient"
+    | "ask_theme"
+    | "ask_message"
+    | "submitting"
+    | "done"
 
-    //question render controller
-    const [currentStep, setCurrentStep] = useState<number>(0)
+interface ChatMessage {
+    id: string
+    role: "assistant" | "user"
+    content: string
+    /** Special inline widget to render instead of/after content */
+    widget?: "theme_selector"
+}
 
-    const showStep = (step: number) => {
-        return currentStep >= step
-    }
+// Assistant prompts for each step
+const ASSISTANT_PROMPTS: Partial<Record<Step, string[]>> = {
+    ask_name: ["What should I call you?"],
+    ask_recipient: [], // dynamic — set with name
+    ask_theme: [
+        "Pick a theme for your letter. It will shape the mood, colors, and atmosphere of your message, helping us turn your thoughts into something memorable, personal, and meaningful to keep.",
+    ],
+    ask_message: [
+        "Now write your letter! Pour your heart out — this is the message your recipient will read.",
+    ],
+}
 
-    const nextStep = () => {
-        setCurrentStep(prev => prev + 1)
-        console.log(currentStep)
-    }
+// ─── Main page component ─────────────────────────────────────────────────────
 
-
+export default function WriteALetterPage() {
+    // ── State ──────────────────────────────────────────────────────────────
+    const [currentStep, setCurrentStep] = useState<Step>("welcome")
+    const [messages, setMessages] = useState<ChatMessage[]>([])
+    const [inputValue, setInputValue] = useState("")
+    const [isTyping, setIsTyping] = useState(false)
+    const [errors, setErrors] = useState<Partial<Record<keyof LetterData, string>>>({})
 
     const [letterData, setLetterData] = useState<LetterData>(() => ({
         id: crypto.randomUUID(),
@@ -37,380 +62,299 @@ export default function page() {
         sender_name: "",
         recipient_name: "",
         theme: "",
-        message: ""
+        message: "",
     }))
 
-
+    // ── Helpers ────────────────────────────────────────────────────────────
     const updateLetter = <K extends keyof LetterData>(key: K, value: LetterData[K]) => {
-        setLetterData(prev => ({
-            ...(prev || {}),
-            [key]: value
-        }))
+        setLetterData(prev => ({ ...prev, [key]: value }))
     }
 
-    const [errors, setErrors] = useState<Partial<Record<keyof LetterData, string>>>({})
-
-    const validaterField = <K extends keyof LetterData>(
+    const validateField = <K extends keyof LetterData>(
         key: K,
         value: LetterData[K],
         schema: z.ZodType
-    ) => {
+    ): boolean => {
         const result = schema.safeParse(value)
-
         if (!result.success) {
-            setErrors(prev => ({
-                ...prev, [key]: result.error.issues[0].message
-            }))
-
+            setErrors(prev => ({ ...prev, [key]: result.error.issues[0].message }))
             return false
         }
-
-
-        setErrors(prev => ({
-            ...prev, [key]: undefined
-        }))
-
+        setErrors(prev => ({ ...prev, [key]: undefined }))
         return true
     }
 
-
-    const containerRef = useRef<HTMLDivElement>(null)
-
-
-    useEffect(() => {
-        const container = containerRef.current
-        if (!container) return
-
-        const observer = new MutationObserver(() => {
-            container.scrollTo({ top: container.scrollHeight, behavior: "smooth" })
-        })
-
-        observer.observe(container, {
-            childList: true,
-            subtree: true,
-            characterData: true,
-        })
-
-        return () => observer.disconnect()
+    const addMessage = useCallback((msg: Omit<ChatMessage, "id">) => {
+        setMessages(prev => [...prev, { ...msg, id: crypto.randomUUID() }])
     }, [])
 
+    const addAssistantMessage = useCallback(
+        (content: string, widget?: ChatMessage["widget"]) => {
+            setIsTyping(true)
+            setTimeout(() => {
+                setIsTyping(false)
+                addMessage({ role: "assistant", content, widget })
+            }, 600)
+        },
+        [addMessage]
+    )
 
-    // const demoLetterData: LetterData = {
-    //     id: "550e8400-e29b-41d4-b716-446651440000",
-    //     slug: "3487gfi34b934",
-    //     sender_name: "Alok",
-    //     recipient_name: "Sarah",
-    //     message: "Happy Birthday ❤️",
-    //     theme: "Yellow",
-    // };
+    // ── Step transitions ───────────────────────────────────────────────────
 
-    const handleFormSubmit = async () => {
+    // Welcome → ask_name on mount
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setCurrentStep("ask_name")
+        }, 1200)
+        return () => clearTimeout(timer)
+    }, [])
 
+    // When step changes, push the corresponding assistant prompt
+    useEffect(() => {
+        if (currentStep === "welcome") return
 
-        console.log("Real FORM data: ", letterData)
+        if (currentStep === "ask_name") {
+            addAssistantMessage(ASSISTANT_PROMPTS.ask_name![0])
+        } else if (currentStep === "ask_recipient") {
+            addAssistantMessage(`Hello ${letterData.sender_name} 😊`)
+            setTimeout(() => {
+                addMessage({
+                    role: "assistant",
+                    content: "This letter is dedicated to whom?",
+                })
+            }, 1000)
+        } else if (currentStep === "ask_theme") {
+            addAssistantMessage(ASSISTANT_PROMPTS.ask_theme![0])
+            setTimeout(() => {
+                addMessage({
+                    role: "assistant",
+                    content: "",
+                    widget: "theme_selector",
+                })
+            }, 1000)
+        } else if (currentStep === "ask_message") {
+            addAssistantMessage(ASSISTANT_PROMPTS.ask_message![0])
+        } else if (currentStep === "done") {
+            addAssistantMessage("Your letter has been created! ✨ It's on its way.")
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentStep])
 
-        const supabase = createClient();
+    // ── Form submit (Supabase) ─────────────────────────────────────────────
+    const handleFormSubmit = async (finalData: LetterData) => {
+        setCurrentStep("submitting")
+        setIsTyping(true)
 
-        console.log("Running...")
+        console.log("Real FORM data: ", finalData)
+
+        const supabase = createClient()
 
         const { data, error } = await supabase
             .from("letters")
             .insert({
-                id: letterData.id,
-                slug: letterData.slug,
-                sender_name: letterData?.sender_name,
-                recipient_name: letterData?.recipient_name,
-                theme: letterData?.theme,
-                message: letterData?.message
+                id: finalData.id,
+                slug: finalData.slug,
+                sender_name: finalData.sender_name,
+                recipient_name: finalData.recipient_name,
+                theme: finalData.theme,
+                message: finalData.message,
             })
             .select()
             .single()
 
+        setIsTyping(false)
+
         if (error) {
             console.error("Error Hai: " + error.message)
+            addMessage({
+                role: "assistant",
+                content: `Something went wrong: ${error.message}. Please try again.`,
+            })
+            setCurrentStep("ask_message")
             return
         }
 
         console.log(data)
-
+        setCurrentStep("done")
     }
 
-    return (
-        <div ref={containerRef} className="relative flex justify-center items-start w-screen h-screen overflow-scroll bg-orange-200 font-sans">
-            <div className="fixed top-0 left-[50%] translate-x-[-50%] flex justify-center w-full backdrop-blur-lg absolute">
-                <h1 className=" w-full max-w-lg text-center flex flex-col justify-center items-center my-2 ">
-                    <a className="p-2 rounded-2xl">Letter Box</a>
-                    <div className="relative w-full h-1 rounded-full  bg-amber-800/50">
-                        <span
-                            style={{ width: `${(currentStep / 5) * 100}%` }}
-                            className="absolute inset-0 rounded-full bg-amber-800 transition-all duration-300 ease-in-out"></span>
-                    </div>
-                </h1>
-            </div>
-            <div className="flex flex-col justify-start items-center max-w-4xl w-full h-full ">
+    // ── Composer send handler ──────────────────────────────────────────────
+    const handleSend = () => {
+        const trimmed = inputValue.trim()
+        if (!trimmed) return
 
-                {/* INTRODUCTORY PHRASE */}
-                {showStep(0) &&
+        if (currentStep === "ask_name") {
+            if (!validateField("sender_name", trimmed, userNameSchema)) {
+                addMessage({ role: "user", content: trimmed })
+                addAssistantMessage(errors.sender_name || "Please enter a valid name.")
+                return
+            }
+            addMessage({ role: "user", content: trimmed })
+            updateLetter("sender_name", trimmed)
+            setInputValue("")
+            // Use functional update of letterData via a ref-like approach
+            setLetterData(prev => {
+                const updated = { ...prev, sender_name: trimmed }
+                // Transition happens after state update
+                setTimeout(() => setCurrentStep("ask_recipient"), 100)
+                return updated
+            })
+        } else if (currentStep === "ask_recipient") {
+            if (!validateField("recipient_name", trimmed, recipientNameSchema)) {
+                addMessage({ role: "user", content: trimmed })
+                setTimeout(() => {
+                    // Re-read errors after validation sets them
+                    setErrors(prev => {
+                        if (prev.recipient_name) {
+                            addMessage({
+                                role: "assistant",
+                                content: prev.recipient_name,
+                            })
+                        }
+                        return prev
+                    })
+                }, 100)
+                setInputValue("")
+                return
+            }
+            addMessage({ role: "user", content: trimmed })
+            updateLetter("recipient_name", trimmed)
+            setInputValue("")
+            setTimeout(() => setCurrentStep("ask_theme"), 100)
+        }
+    }
 
-                    <EntryAnimation onAnimationComplete={nextStep} className="" >
-                        <div >
-                            <div className="flex text-3xl mt-24 font-medium">
-                                👋 Welcome to LetterBox, a little place on the internet where you can create and send thoughtful digital letters.
-                            </div>
+    // ── Theme selection handler ────────────────────────────────────────────
+    const handleThemeSelect = (theme: string) => {
+        if (!validateField("theme", theme, themeSchema)) return
+        addMessage({ role: "user", content: `Theme: ${theme}` })
+        updateLetter("theme", theme)
+        setTimeout(() => setCurrentStep("ask_message"), 100)
+    }
 
-                            <a className="w-full text-left text-xl">
-                                Before we begin, I would like to ask you a few questions to make your letter feel truly personal.
-                            </a>
-                        </div>
-                    </EntryAnimation>}
+    // ── Message (letter body) submit handler ───────────────────────────────
+    const [letterMessage, setLetterMessage] = useState("")
 
-
-                <div className="flex flex-col justify-start items-start w-full mt-8 gap-2 ">
-                    {/* Question 1 */}
-
-                    {showStep(1) &&
-                        <EntryAnimation className="flex flex-col justify-start items-start w-full gap-2 ">
-
-                            <QuestionDialogChat
-                                onSubmit={(value) => {
-                                    if (!validaterField(
-                                        "sender_name",
-                                        value,
-                                        userNameSchema
-                                    )) {
-                                        return
-                                    }
-
-                                    updateLetter("sender_name", value)
-                                    nextStep()
-                                }}
-                            >
-
-                                What should I call you ?
-                            </QuestionDialogChat>
-
-                            {errors.sender_name &&
-                                <EntryAnimation className="flex flex-col justify-start items-start w-full gap-2 ">
-
-                                    <QuestionChat className="text-red-500">
-                                        {errors.sender_name}
-                                    </QuestionChat>
-                                </EntryAnimation>}
-
-                        </EntryAnimation>}
-
-
-                    {/* Question 2 */}
-                    {showStep(2) &&
-                        <EntryAnimation className="flex flex-col justify-start items-start w-full gap-2 ">
-                            <QuestionChat>
-                                Hello {letterData?.sender_name} 😊
-                            </QuestionChat>
-                            <QuestionDialogChat onSubmit={(value) => {
-                                if (!validaterField(
-                                    "recipient_name",
-                                    value,
-                                    recipientNameSchema
-                                )) {
-                                    return
-                                }
-
-                                updateLetter("recipient_name", value)
-                                nextStep()
-                            }}>
-                                This letter is dedicated to whome ?
-                            </QuestionDialogChat>
-
-
-
-
-                        </EntryAnimation>}
-
-                </div>
-
-                {/* Question 3 */}
-                {showStep(3) &&
-                    <EntryAnimation className="w-full">
-                        <div className="flex flex-col items-start justify-start gap-4 w-full mt-8">
-                            <QuestionChat>
-                                Pick a theme for your letter {letterData?.recipient_name}, It will shape the mood, colors, and atmosphere of your message, helping us turn your thoughts into something memorable, personal, and meaningful to keep.
-                            </QuestionChat>
-                            <div className="flex justify-center theme-selector-container w-full mt-16">
-                                <ThemeSelectorCard onSubmit={(value) => {
-                                    if (!validaterField(
-                                        "theme",
-                                        value,
-                                        themeSchema
-                                    )) {
-                                        return
-                                    }
-
-                                    updateLetter("theme", value)
-                                    nextStep()
-                                }} />
-                            </div>
-                            {errors.theme &&
-                                <EntryAnimation className="flex flex-col justify-start items-start w-full gap-2 ">
-
-                                    <QuestionChat className="text-red-500">
-                                        {errors.theme}
-                                    </QuestionChat>
-                                </EntryAnimation>}
-                        </div>
-                    </EntryAnimation>
+    const handleLetterSubmit = () => {
+        const trimmed = letterMessage.trim()
+        if (!validateField("message", trimmed, messageSchema)) {
+            setErrors(prev => {
+                if (prev.message) {
+                    addMessage({ role: "assistant", content: prev.message })
                 }
-
-
-                {/* Question 4 */}
-                {showStep(4) &&
-                    <EntryAnimation className=" flex flex-col justify-center items-end w-full gap-2 mt-24 ">
-                        <div className="text-2xl mt-8">
-                            Pick a theme for your letter, It will shape the mood, colors, and atmosphere of your message, helping us turn your thoughts into something memorable, personal, and meaningful to keep.
-                        </div>
-                        <div className="flex justify-center w-full  ">
-                            <NotebookBackground className="px-10 py-8 rounded-2xl mt-4 ">
-                                <textarea className="w-full h-[400px] outline-none" />
-                            </NotebookBackground>
-                        </div>
-
-                        {/* Submit Button */}
-                        <button onClick={(value) => {
-                            if (!validaterField(
-                                "message",
-                                value,
-                                messageSchema
-                            )) {
-                                return
-                            }
-
-                            updateLetter("message", value)
-                            nextStep()
-                        }} className="translate-y-[-100px] flex items-center px-4 py-2 rounded-2xl text-2xl bg-amber-100 mt-10 gap-4">
-                            <Send strokeWidth={1.5} size={20} />
-                            Render Letter
-                        </button>
-                    </EntryAnimation>}
-
-
-            </div>
-
-        </div >
-    )
-
-}
-
-
-
-
-export function QuestionDialogChat({ onSubmit, children }: { onSubmit: (value: string) => void, children: React.ReactNode }) {
-
-    const [value, setValue] = useState()
-
-    const handleSubmit = () => {
-        onSubmit(value)
-    }
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "Enter") {
-            handleSubmit()
+                return prev
+            })
+            return
         }
+        addMessage({ role: "user", content: trimmed })
+        setLetterMessage("")
+
+        setLetterData(prev => {
+            const updated = { ...prev, message: trimmed }
+            setTimeout(() => handleFormSubmit(updated), 100)
+            return updated
+        })
     }
 
+    // ── Determine if composer is disabled ──────────────────────────────────
+    const isExpanded = currentStep === "ask_message"
 
+    const composerDisabled =
+        isTyping ||
+        currentStep === "welcome" ||
+        currentStep === "ask_theme" ||
+        currentStep === "submitting" ||
+        currentStep === "done"
 
-
-    return (
-        <div className="flex flex-col justify-start items-start w-full gap-2 ">
-            <div className="px-4 py-2 rounded-2xl text-2xl bg-amber-100 ">
-                {children}
-            </div>
-            <div className="flex justify-end w-full">
-                <div className="flex items-center px-4 py-2 rounded-2xl text-2xl bg-amber-100 ">
-                    <input type="text" className="appearance-none border-0 outline-none w-full text-left" onKeyDown={handleKeyDown} onChange={(e) => setValue(e.target.value)} />
-                    <SendHorizontal strokeWidth={1.5} size={20} onClick={handleSubmit} />
-                </div>
-            </div>
-        </div>
-    )
-}
-
-
-export function QuestionChat({ children, className }: { children: React.ReactNode, className?: string }) {
-    return (
-        <div className={`flex justify-start w-full ${className}`}>
-            <div className="px-4 py-2 rounded-2xl text-2xl bg-amber-100 max-w-2xl">
-                {children}
-            </div>
-        </div>
-    )
-}
-
-
-export function ThemeSelectorCard({ onSubmit }: { onSubmit: (value: string) => void }) {
-
-    const themeList = [
-        {
-            name: "Yellow"
-        },
-        {
-            name: "Blue"
-        },
-        {
-            name: "Green"
-        },
-        {
-            name: "Red"
-        }
-    ]
-
-    const handleClick = (idx: number) => {
-        onChange(themeList[idx].name)
-        nextStep()
-
+    // ── Progress calculation ───────────────────────────────────────────────
+    const stepProgress: Record<Step, number> = {
+        welcome: 0,
+        ask_name: 1,
+        ask_recipient: 2,
+        ask_theme: 3,
+        ask_message: 4,
+        submitting: 4.5,
+        done: 5,
     }
+    const progress = stepProgress[currentStep] / 5
 
-
-
+    // ── Render ─────────────────────────────────────────────────────────────
     return (
-        <div className="flex flex-col justify-center items-center w-full max-w-2xl bg-amber-600/40 rounded-2xl p-4 font-mono">
-            <div className="group title-container flex  justify-start items-between w-full  gap-4">
-                <div className=" w-[60px] relative">
-                    <Image src={stamp3} alt="stamp" width={60} className="object-contain absolute inset-0 -rotate-15 group-hover:rotate-0 group-hover:z-10 group-hover:duration-300 group-hover:translate-x-2 transition-all duration-300 ease-in-out " />
-                    <Image src={stamp} alt="stamp" width={60} className="absolute inset-0 object-contain rotate-15 group-hover:rotate-0 group-hover:z-10 group-hover:duration-300 group-hover:-translate-x-2 transition-all duration-300 ease-in-out " />
-
-                </div>
-
-                <div className="flex flex-col justify-between gap-2 py-1">
-                    <h1 className="text-3xl">Select a theme</h1>
-                    <a className="text tracking-tight leading-none">We have curated 5 themes for you, choose the one you like </a>
+        <div className="flex flex-col w-screen h-dvh bg-orange-200 font-sans">
+            {/* ── Fixed header / progress bar ── */}
+            <div className="flex-shrink-0 z-30 w-full backdrop-blur-lg bg-orange-200/80">
+                <div className="mx-auto max-w-3xl w-full flex flex-col items-center py-2 px-4">
+                    <a className="p-2 rounded-2xl font-medium">Letter Box</a>
+                    <div className="relative w-full h-1 rounded-full bg-amber-800/50">
+                        <span
+                            style={{ width: `${progress * 100}%` }}
+                            className="absolute inset-0 rounded-full bg-amber-800 transition-all duration-300 ease-in-out"
+                        />
+                    </div>
                 </div>
             </div>
 
-            <div className="selector-container flex flex-col justify-start items-center gap-2 p-2 mt-6 w-full ">
-
-                {[...Array(4)].map((_, idx) => (
-                    <div
-                        onClick={() => onSubmit(themeList[idx].name)}
-                        className="group flex justify-start items-center gap-4 w-full p-2 bg-amber-200/30 hover:bg-amber-200/60 rounded-2xl">
-                        <div className="p-2 bg-yellow-100 rounded-full">
-                            <Flower size={16} className="scale-100 group-hover:scale-120 group-hover:rotate-200 transition-all duration-300 ease-in-out" />
+            {/* ── Chat thread (scrollable area) ── */}
+            <ChatThread>
+                {/* Welcome card — existing design preserved exactly */}
+                <EntryAnimation className="">
+                    <div className="mb-4">
+                        <div className="flex text-3xl mt-4 font-medium">
+                            👋 Welcome to LetterBox, a little place on the internet where you can create and send thoughtful digital letters.
                         </div>
-                        <div className="flex flex-col justify-between items-start">
-                            <div className="text-xl">Floral</div>
-                            <div className="text-sm text-neutral-800">A floral theme with flowers and leaves</div>
-                        </div>
-                    </div>))}
+                        <a className="w-full text-left text-xl block mt-2">
+                            Before we begin, I would like to ask you a few questions to make your letter feel truly personal.
+                        </a>
+                    </div>
+                </EntryAnimation>
 
-            </div>
+                {/* Message bubbles */}
+                {messages.map((msg) => {
+                    // Theme selector widget
+                    if (msg.widget === "theme_selector") {
+                        return (
+                            <ThemeSelector
+                                key={msg.id}
+                                onSelect={handleThemeSelect}
+                                disabled={currentStep !== "ask_theme"}
+                            />
+                        )
+                    }
 
 
+                    return (
+                        <MessageBubble key={msg.id} role={msg.role}>
+                            {msg.content}
+                        </MessageBubble>
+                    )
+                })}
 
+                {/* Typing indicator */}
+                {isTyping && <TypingIndicator />}
+
+                {/* Bottom spacer so content isn't hidden behind composer */}
+                <div className="h-4 flex-shrink-0" />
+            </ChatThread>
+
+            {/* ── Fixed bottom composer (morphs into letter editor) ── */}
+            <ChatComposer
+                value={isExpanded ? letterMessage : inputValue}
+                onChange={isExpanded ? setLetterMessage : setInputValue}
+                onSend={isExpanded ? handleLetterSubmit : handleSend}
+                disabled={composerDisabled}
+                expanded={isExpanded}
+                placeholder={
+                    isExpanded
+                        ? "Write your letter here…"
+                        : currentStep === "ask_name"
+                            ? "Enter your name…"
+                            : currentStep === "ask_recipient"
+                                ? "Enter the recipient's name…"
+                                : currentStep === "ask_theme"
+                                    ? "Select a theme above…"
+                                    : "Type your answer…"
+                }
+            />
         </div>
     )
 }
-
-
-
-
-// @LetterBox1483@
-
