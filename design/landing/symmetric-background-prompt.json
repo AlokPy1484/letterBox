@@ -1,0 +1,5 @@
+{
+  "generator": "Built-in image_gen",
+  "prompt": "Use case: precise-object-edit. Edit target: attached countryside village landing background. Make the WHOLE IMAGE strictly mirror-symmetric about its vertical center axis at x=50%. The left and right halves must be reflections of one another, not merely loosely balanced. Mirror the charming cottage, garden gate, rusty red letterbox and flower-covered stone wall from the left onto the right; mirror overhanging foliage, distant houses, hills, clouds and lighting too. Center the lane's vanishing point exactly on the vertical axis, with symmetrical foreground road. Keep the central upper sky broad, open, pale and low-detail for landing-page text. Preserve the original wide 16:9 framing, aged-paper watercolor/gouache texture, vintage animated storybook style, muted sage/cream/peach/blue-gray palette, glowing windows, dusk atmosphere. Exact bilateral visual symmetry including vegetation and clouds. No visible central seam, no text, logos, UI or characters.",
+  "asset": "public/landing/storybook-background-symmetric.png"
+}

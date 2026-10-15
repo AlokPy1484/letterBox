@@ -1,10 +1,11 @@
 "use client"
 
 
-import React, { useCallback, useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
-import { LetterData, messageSchema, recipientNameSchema, themeSchema, userNameSchema } from "@/schema/letter"
+import React, { useCallback, useEffect, useRef, useState } from "react"
+import { submitLetter } from "@/lib/supabase/submit-letter"
+import { LetterData, letterSchema, messageSchema, recipientNameSchema, themeSchema, userNameSchema } from "@/schema/letter"
 import z from "zod"
+import Link from "next/link"
 
 import ChatThread from "./components/ChatThread"
 import ChatComposer from "./components/ChatComposer"
@@ -13,6 +14,8 @@ import ThemeSelector from "./components/ThemeSelector"
 import TypingIndicator from "./components/TypingIndicator"
 
 import EntryAnimation from "./components/EntryAnimation"
+import LetterPreview, { type LetterPreviewData } from "./components/LetterPreview"
+import styles from "./write-letter.module.css"
 
 
 // ─── Conversation step definitions ───────────────────────────────────────────
@@ -25,6 +28,7 @@ type Step =
     | "ask_message"
     | "submitting"
     | "done"
+    | "failed"
 
 interface ChatMessage {
     id: string
@@ -32,6 +36,9 @@ interface ChatMessage {
     content: string
     /** Special inline widget to render instead of/after content */
     widget?: "theme_selector"
+    submission?: "pending" | "saved" | "failed"
+    letterUrl?: string
+    preview?: LetterPreviewData
 }
 
 // Assistant prompts for each step
@@ -54,9 +61,9 @@ export default function WriteALetterPage() {
     const [messages, setMessages] = useState<ChatMessage[]>([])
     const [inputValue, setInputValue] = useState("")
     const [isTyping, setIsTyping] = useState(false)
-    const [errors, setErrors] = useState<Partial<Record<keyof LetterData, string>>>({})
+    const [, setErrors] = useState<Partial<Record<keyof LetterData, string>>>({})
 
-    const [letterData, setLetterData] = useState<LetterData>(() => ({
+    const [letterData, setLetterData] = useState<Omit<LetterData, "theme"> & { theme: LetterData["theme"] | "" }>(() => ({
         id: crypto.randomUUID(),
         slug: crypto.randomUUID().slice(0, 8),
         sender_name: "",
@@ -64,6 +71,10 @@ export default function WriteALetterPage() {
         theme: "",
         message: "",
     }))
+
+    const inFlight = useRef(false)
+    const submittedPayload = useRef<LetterData | null>(null)
+    const [submissionBubbleId, setSubmissionBubbleId] = useState<string | null>(null)
 
     // ── Helpers ────────────────────────────────────────────────────────────
     const updateLetter = <K extends keyof LetterData>(key: K, value: LetterData[K]) => {
@@ -109,73 +120,66 @@ export default function WriteALetterPage() {
         return () => clearTimeout(timer)
     }, [])
 
-    // When step changes, push the corresponding assistant prompt
+    // Schedule conversational prompts and cancel them if the step changes.
     useEffect(() => {
-        if (currentStep === "welcome") return
-
-        if (currentStep === "ask_name") {
-            addAssistantMessage(ASSISTANT_PROMPTS.ask_name![0])
-        } else if (currentStep === "ask_recipient") {
-            addAssistantMessage(`Hello ${letterData.sender_name} 😊`)
-            setTimeout(() => {
-                addMessage({
-                    role: "assistant",
-                    content: "This letter is dedicated to whom?",
-                })
-            }, 1000)
-        } else if (currentStep === "ask_theme") {
-            addAssistantMessage(ASSISTANT_PROMPTS.ask_theme![0])
-            setTimeout(() => {
-                addMessage({
-                    role: "assistant",
-                    content: "",
-                    widget: "theme_selector",
-                })
-            }, 1000)
-        } else if (currentStep === "ask_message") {
-            addAssistantMessage(ASSISTANT_PROMPTS.ask_message![0])
-        } else if (currentStep === "done") {
-            addAssistantMessage("Your letter has been created! ✨ It's on its way.")
+        if (currentStep === "welcome" || currentStep === "submitting" || currentStep === "done" || currentStep === "failed") return
+        const content = currentStep === "ask_recipient" ? `Hello ${letterData.sender_name} 😊`
+            : ASSISTANT_PROMPTS[currentStep]?.[0]
+        if (!content) return
+        const typingTimer = setTimeout(() => setIsTyping(true), 0)
+        const promptTimer = setTimeout(() => {
+            setIsTyping(false)
+            addMessage({ role: "assistant", content })
+        }, 600)
+        const followupTimer = setTimeout(() => {
+            if (currentStep === "ask_recipient") addMessage({ role: "assistant", content: "This letter is dedicated to whom?" })
+            if (currentStep === "ask_theme") addMessage({ role: "assistant", content: "", widget: "theme_selector" })
+        }, 1000)
+        return () => {
+            clearTimeout(typingTimer)
+            clearTimeout(promptTimer)
+            clearTimeout(followupTimer)
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentStep])
+    }, [currentStep, letterData.sender_name, addMessage])
 
     // ── Form submit (Supabase) ─────────────────────────────────────────────
-    const handleFormSubmit = async (finalData: LetterData) => {
+    const handleFormSubmit = async (finalData: LetterData, retry = false) => {
+        if (inFlight.current) return
+        inFlight.current = true
+        submittedPayload.current = finalData
         setCurrentStep("submitting")
-        setIsTyping(true)
-
-        console.log("Real FORM data: ", finalData)
-
-        const supabase = createClient()
-
-        const { data, error } = await supabase
-            .from("letters")
-            .insert({
-                id: finalData.id,
-                slug: finalData.slug,
-                sender_name: finalData.sender_name,
-                recipient_name: finalData.recipient_name,
-                theme: finalData.theme,
-                message: finalData.message,
-            })
-            .select()
-            .single()
-
         setIsTyping(false)
+        const statusId = retry && submissionBubbleId ? submissionBubbleId : crypto.randomUUID()
+        setSubmissionBubbleId(statusId)
+        const pending: ChatMessage = { id: statusId, role: "assistant", content: "Sending your letter…", submission: "pending" }
+        setMessages(prev => retry ? prev.map(msg => msg.id === statusId ? pending : msg) : [...prev, pending])
 
-        if (error) {
-            console.error("Error Hai: " + error.message)
-            addMessage({
-                role: "assistant",
-                content: `Something went wrong: ${error.message}. Please try again.`,
-            })
-            setCurrentStep("ask_message")
-            return
+        try {
+            const saved = await submitLetter(finalData)
+            // Local development uses the requested HTTP link; deployed links use the current origin.
+            const origin = window.location.hostname === "localhost" ? "http://localhost:3000" : window.location.origin
+            const letterUrl = `${origin}/letters/${encodeURIComponent(saved.slug)}`
+            setMessages(prev => [...prev.map(msg => msg.id === statusId ? { ...msg, content: "Your letter was saved successfully. It’s ready to share.", submission: "saved" as const } : msg), {
+                id: crypto.randomUUID(), role: "assistant", content: "You can view your letter at:", letterUrl,
+                preview: { theme: finalData.theme, sender_name: finalData.sender_name, recipient_name: finalData.recipient_name },
+            }])
+            setLetterMessage("")
+            setCurrentStep("done")
+        } catch {
+            setMessages(prev => prev.map(msg => msg.id === statusId ? { ...msg, content: "Your letter couldn’t be saved. Your words are still here. Please try again.", submission: "failed" as const } : msg))
+            setCurrentStep("failed")
+        } finally {
+            inFlight.current = false
         }
+    }
 
-        console.log(data)
-        setCurrentStep("done")
+    const handleRetry = () => {
+        if (currentStep !== "failed" || !submittedPayload.current) return
+        void handleFormSubmit(submittedPayload.current, true)
+    }
+
+    const handleEditLetter = () => {
+        if (currentStep === "failed" && !inFlight.current) setCurrentStep("ask_message")
     }
 
     // ── Composer send handler ──────────────────────────────────────────────
@@ -186,74 +190,55 @@ export default function WriteALetterPage() {
         if (currentStep === "ask_name") {
             if (!validateField("sender_name", trimmed, userNameSchema)) {
                 addMessage({ role: "user", content: trimmed })
-                addAssistantMessage(errors.sender_name || "Please enter a valid name.")
+                addAssistantMessage(userNameSchema.safeParse(trimmed).error?.issues[0].message || "Please enter a valid name.")
                 return
             }
             addMessage({ role: "user", content: trimmed })
             updateLetter("sender_name", trimmed)
             setInputValue("")
-            // Use functional update of letterData via a ref-like approach
-            setLetterData(prev => {
-                const updated = { ...prev, sender_name: trimmed }
-                // Transition happens after state update
-                setTimeout(() => setCurrentStep("ask_recipient"), 100)
-                return updated
-            })
+            setCurrentStep("ask_recipient")
         } else if (currentStep === "ask_recipient") {
             if (!validateField("recipient_name", trimmed, recipientNameSchema)) {
                 addMessage({ role: "user", content: trimmed })
-                setTimeout(() => {
-                    // Re-read errors after validation sets them
-                    setErrors(prev => {
-                        if (prev.recipient_name) {
-                            addMessage({
-                                role: "assistant",
-                                content: prev.recipient_name,
-                            })
-                        }
-                        return prev
-                    })
-                }, 100)
+                addAssistantMessage(recipientNameSchema.safeParse(trimmed).error?.issues[0].message || "Please enter a valid name.")
                 setInputValue("")
                 return
             }
             addMessage({ role: "user", content: trimmed })
             updateLetter("recipient_name", trimmed)
             setInputValue("")
-            setTimeout(() => setCurrentStep("ask_theme"), 100)
+            setCurrentStep("ask_theme")
         }
     }
 
     // ── Theme selection handler ────────────────────────────────────────────
-    const handleThemeSelect = (theme: string) => {
-        if (!validateField("theme", theme, themeSchema)) return
+    const handleThemeSelect = (value: string) => {
+        const result = themeSchema.safeParse(value)
+        if (!result.success) return
+        const theme = result.data
         addMessage({ role: "user", content: `Theme: ${theme}` })
-        updateLetter("theme", theme)
-        setTimeout(() => setCurrentStep("ask_message"), 100)
+        updateLetter("theme", themeSchema.parse(theme))
+        setCurrentStep("ask_message")
     }
 
     // ── Message (letter body) submit handler ───────────────────────────────
     const [letterMessage, setLetterMessage] = useState("")
 
     const handleLetterSubmit = () => {
+        if (currentStep !== "ask_message" || inFlight.current || isTyping) return
         const trimmed = letterMessage.trim()
         if (!validateField("message", trimmed, messageSchema)) {
-            setErrors(prev => {
-                if (prev.message) {
-                    addMessage({ role: "assistant", content: prev.message })
-                }
-                return prev
-            })
+            addAssistantMessage(messageSchema.safeParse(trimmed).error?.issues[0].message || "Please write a longer letter.")
+            return
+        }
+        const parsed = letterSchema.safeParse({ ...letterData, message: trimmed })
+        if (!parsed.success) {
+            addAssistantMessage("Please check your letter details before sending.")
             return
         }
         addMessage({ role: "user", content: trimmed })
-        setLetterMessage("")
-
-        setLetterData(prev => {
-            const updated = { ...prev, message: trimmed }
-            setTimeout(() => handleFormSubmit(updated), 100)
-            return updated
-        })
+        setLetterData(parsed.data)
+        void handleFormSubmit(parsed.data)
     }
 
     // ── Determine if composer is disabled ──────────────────────────────────
@@ -264,48 +249,38 @@ export default function WriteALetterPage() {
         currentStep === "welcome" ||
         currentStep === "ask_theme" ||
         currentStep === "submitting" ||
+        currentStep === "failed" ||
         currentStep === "done"
 
     // ── Progress calculation ───────────────────────────────────────────────
-    const stepProgress: Record<Step, number> = {
-        welcome: 0,
-        ask_name: 1,
-        ask_recipient: 2,
-        ask_theme: 3,
-        ask_message: 4,
-        submitting: 4.5,
-        done: 5,
-    }
-    const progress = stepProgress[currentStep] / 5
+    const stage = { welcome: 1, ask_name: 1, ask_recipient: 2, ask_theme: 3, ask_message: 4, submitting: 4, done: 4, failed: 4 }[currentStep]
+    const stageNames = ["Your name", "Recipient", "Theme", "Letter"]
+    const progressLabel = currentStep === "submitting" ? "Saving your letter…"
+        : currentStep === "done" ? "Your letter is ready"
+        : currentStep === "failed" ? "Letter not saved"
+        : `Step ${stage} of 4 · ${stageNames[stage - 1]}`
 
     // ── Render ─────────────────────────────────────────────────────────────
     return (
-        <div className="flex flex-col w-screen h-dvh bg-orange-200 font-sans">
-            {/* ── Fixed header / progress bar ── */}
-            <div className="flex-shrink-0 z-30 w-full backdrop-blur-lg bg-orange-200/80">
-                <div className="mx-auto max-w-3xl w-full flex flex-col items-center py-2 px-4">
-                    <a className="p-2 rounded-2xl font-medium">Letter Box</a>
-                    <div className="relative w-full h-1 rounded-full bg-amber-800/50">
-                        <span
-                            style={{ width: `${progress * 100}%` }}
-                            className="absolute inset-0 rounded-full bg-amber-800 transition-all duration-300 ease-in-out"
-                        />
+        <main className={styles.page}>
+            <header className={styles.header}>
+                <div className={styles.headerInner}>
+                    <div className={styles.headerRow}>
+                        <Link href="https://letter-box-landing.vercel.app" className={styles.brand}>Letter Box<span aria-hidden="true">✳</span></Link>
+                        <span className={styles.progressLabel} role="status">{progressLabel}</span>
+                    </div>
+                    <div className={styles.progress} role="progressbar" aria-label="Letter creation progress" aria-valuemin={0} aria-valuemax={4} aria-valuenow={currentStep === "done" ? 4 : stage - 1} aria-valuetext={progressLabel}>
+                        {stageNames.map((name, index) => <span key={name} className={`${styles.progressSegment} ${index < stage - 1 || currentStep === "done" ? styles.complete : ""} ${index === stage - 1 && currentStep !== "done" ? styles.current : ""}`} />)}
                     </div>
                 </div>
-            </div>
+            </header>
 
             {/* ── Chat thread (scrollable area) ── */}
             <ChatThread>
-                {/* Welcome card — existing design preserved exactly */}
-                <EntryAnimation className="">
-                    <div className="mb-4">
-                        <div className="flex text-3xl mt-4 font-medium">
-                            👋 Welcome to LetterBox, a little place on the internet where you can create and send thoughtful digital letters.
-                        </div>
-                        <a className="w-full text-left text-xl block mt-2">
-                            Before we begin, I would like to ask you a few questions to make your letter feel truly personal.
-                        </a>
-                    </div>
+                <EntryAnimation className={styles.welcome}>
+                    <p className={styles.eyebrow}>A little thought. A lasting keepsake.</p>
+                    <h1>A letter, from the heart.</h1>
+                    <p className={styles.intro}>Welcome to LetterBox, a little place for thoughtful digital letters. A few simple questions will help make yours feel personal.</p>
                 </EntryAnimation>
 
                 {/* Message bubbles */}
@@ -316,6 +291,7 @@ export default function WriteALetterPage() {
                             <ThemeSelector
                                 key={msg.id}
                                 onSelect={handleThemeSelect}
+                                selected={letterData.theme}
                                 disabled={currentStep !== "ask_theme"}
                             />
                         )
@@ -323,9 +299,20 @@ export default function WriteALetterPage() {
 
 
                     return (
-                        <MessageBubble key={msg.id} role={msg.role}>
-                            {msg.content}
-                        </MessageBubble>
+                        <React.Fragment key={msg.id}>
+                            <MessageBubble role={msg.role}>
+                                <div className={msg.submission === "pending" ? styles.sendingStatus : undefined}>
+                                    {msg.submission === "pending" && <span className={styles.sendingDots} aria-hidden="true"><i /><i /><i /></span>}
+                                    <span>{msg.content}</span>
+                                </div>
+                                {msg.letterUrl && <a className={styles.letterLink} href={msg.letterUrl}>{msg.letterUrl}</a>}
+                                {msg.submission === "failed" && msg.id === submissionBubbleId && currentStep === "failed" && <div className={styles.submissionActions}>
+                                    <button type="button" onClick={handleRetry}>Retry</button>
+                                    <button type="button" onClick={handleEditLetter}>Edit letter</button>
+                                </div>}
+                            </MessageBubble>
+                            {msg.letterUrl && msg.preview && <LetterPreview href={msg.letterUrl} letter={msg.preview} />}
+                        </React.Fragment>
                     )
                 })}
 
@@ -343,8 +330,13 @@ export default function WriteALetterPage() {
                 onSend={isExpanded ? handleLetterSubmit : handleSend}
                 disabled={composerDisabled}
                 expanded={isExpanded}
+                submitting={currentStep === "submitting"}
+                complete={false}
                 placeholder={
-                    isExpanded
+                    currentStep === "submitting" ? "Saving your letter…"
+                        : currentStep === "done" ? "Your letter is ready to share"
+                        : currentStep === "failed" ? "Use Retry or Edit letter above"
+                        : isExpanded
                         ? "Write your letter here…"
                         : currentStep === "ask_name"
                             ? "Enter your name…"
@@ -355,6 +347,6 @@ export default function WriteALetterPage() {
                                     : "Type your answer…"
                 }
             />
-        </div>
+        </main>
     )
 }
