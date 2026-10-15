@@ -25,7 +25,7 @@ export default function LetterLoading({ state = "loading", onRetry }: {
         : "Your letter couldn’t be loaded. Please try again."
 
     return <main className={styles.screen} aria-busy={loading}>
-        <Link href="/" className={styles.brand}>Letter Box <span aria-hidden="true">✳</span></Link>
+        <Link href="https://letter-box-landing.vercel.app" className={styles.brand}>Letter Box <span aria-hidden="true">✳</span></Link>
         <div className={styles.center}>
             <div className={`${styles.envelope} ${loading ? styles.floating : ""}`}>
                 <svg className={styles.art} viewBox="0 0 600 500" preserveAspectRatio="none" aria-hidden="true" focusable="false">

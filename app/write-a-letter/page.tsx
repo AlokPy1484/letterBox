@@ -14,6 +14,7 @@ import ThemeSelector from "./components/ThemeSelector"
 import TypingIndicator from "./components/TypingIndicator"
 
 import EntryAnimation from "./components/EntryAnimation"
+import LetterPreview, { type LetterPreviewData } from "./components/LetterPreview"
 import styles from "./write-letter.module.css"
 
 
@@ -37,6 +38,7 @@ interface ChatMessage {
     widget?: "theme_selector"
     submission?: "pending" | "saved" | "failed"
     letterUrl?: string
+    preview?: LetterPreviewData
 }
 
 // Assistant prompts for each step
@@ -159,6 +161,7 @@ export default function WriteALetterPage() {
             const letterUrl = `${origin}/letters/${encodeURIComponent(saved.slug)}`
             setMessages(prev => [...prev.map(msg => msg.id === statusId ? { ...msg, content: "Your letter was saved successfully. It’s ready to share.", submission: "saved" as const } : msg), {
                 id: crypto.randomUUID(), role: "assistant", content: "You can view your letter at:", letterUrl,
+                preview: { theme: finalData.theme, sender_name: finalData.sender_name, recipient_name: finalData.recipient_name },
             }])
             setLetterMessage("")
             setCurrentStep("done")
@@ -263,7 +266,7 @@ export default function WriteALetterPage() {
             <header className={styles.header}>
                 <div className={styles.headerInner}>
                     <div className={styles.headerRow}>
-                        <Link href="/" className={styles.brand}>Letter Box<span aria-hidden="true">✳</span></Link>
+                        <Link href="https://letter-box-landing.vercel.app" className={styles.brand}>Letter Box<span aria-hidden="true">✳</span></Link>
                         <span className={styles.progressLabel} role="status">{progressLabel}</span>
                     </div>
                     <div className={styles.progress} role="progressbar" aria-label="Letter creation progress" aria-valuemin={0} aria-valuemax={4} aria-valuenow={currentStep === "done" ? 4 : stage - 1} aria-valuetext={progressLabel}>
@@ -296,17 +299,20 @@ export default function WriteALetterPage() {
 
 
                     return (
-                        <MessageBubble key={msg.id} role={msg.role}>
-                            <div className={msg.submission === "pending" ? styles.sendingStatus : undefined}>
-                                {msg.submission === "pending" && <span className={styles.sendingDots} aria-hidden="true"><i /><i /><i /></span>}
-                                <span>{msg.content}</span>
-                            </div>
-                            {msg.letterUrl && <a className={styles.letterLink} href={msg.letterUrl}>{msg.letterUrl}</a>}
-                            {msg.submission === "failed" && msg.id === submissionBubbleId && currentStep === "failed" && <div className={styles.submissionActions}>
-                                <button type="button" onClick={handleRetry}>Retry</button>
-                                <button type="button" onClick={handleEditLetter}>Edit letter</button>
-                            </div>}
-                        </MessageBubble>
+                        <React.Fragment key={msg.id}>
+                            <MessageBubble role={msg.role}>
+                                <div className={msg.submission === "pending" ? styles.sendingStatus : undefined}>
+                                    {msg.submission === "pending" && <span className={styles.sendingDots} aria-hidden="true"><i /><i /><i /></span>}
+                                    <span>{msg.content}</span>
+                                </div>
+                                {msg.letterUrl && <a className={styles.letterLink} href={msg.letterUrl}>{msg.letterUrl}</a>}
+                                {msg.submission === "failed" && msg.id === submissionBubbleId && currentStep === "failed" && <div className={styles.submissionActions}>
+                                    <button type="button" onClick={handleRetry}>Retry</button>
+                                    <button type="button" onClick={handleEditLetter}>Edit letter</button>
+                                </div>}
+                            </MessageBubble>
+                            {msg.letterUrl && msg.preview && <LetterPreview href={msg.letterUrl} letter={msg.preview} />}
+                        </React.Fragment>
                     )
                 })}
 
