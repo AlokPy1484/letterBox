@@ -1,63 +1,44 @@
 "use client"
 
-import { Flower } from "lucide-react"
+import { Check } from "lucide-react"
 import Image from "next/image"
 import stamp from "@/public/stamp.png"
 import stamp3 from "@/public/stamp3.png"
-import { motion } from "motion/react"
+import { motion, useReducedMotion } from "motion/react"
+import ThemeIcon, { type ThemeIconName } from "./ThemeIcon"
+import styles from "../write-letter.module.css"
 
-interface ThemeSelectorProps {
-    onSelect: (theme: string) => void
-    disabled?: boolean
-}
-
-const themeList = [
-    { name: "Yellow", label: "Sunshine", description: "Warm and cheerful, like a sunny day" },
-    { name: "Blue", label: "Ocean", description: "Calm and serene, like a peaceful sea" },
-    { name: "Green", label: "Forest", description: "Fresh and natural, like a woodland walk" },
-    { name: "Red", label: "Passion", description: "Bold and heartfelt, like a warm embrace" },
+const themes: { name: string; label: string; description: string; color: string; tint: string; icon: ThemeIconName }[] = [
+    { name: "Yellow", label: "Sunshine", icon: "sunshine", description: "Warm and cheerful, like a sunny day", color: "#e2aa32", tint: "#fff0bd" },
+    { name: "Blue", label: "Ocean", icon: "ocean", description: "Calm and serene, like a peaceful sea", color: "#6396ad", tint: "#e1edf0" },
+    { name: "Green", label: "Forest", icon: "forest", description: "Fresh and natural, like a woodland walk", color: "#7e9872", tint: "#e7ecda" },
+    { name: "Red", label: "Passion", icon: "passion", description: "Bold and heartfelt, like a warm embrace", color: "#c47c6e", tint: "#f6e2d8" },
 ]
 
-export default function ThemeSelector({ onSelect, disabled = false }: ThemeSelectorProps) {
+export default function ThemeSelector({ onSelect, disabled = false, selected }: {
+    onSelect: (theme: string) => void; disabled?: boolean; selected?: string
+}) {
+    const reduceMotion = useReducedMotion()
     return (
-        <motion.div
-            className="w-full max-w-md"
-            initial={{ y: 6, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-        >
-            <div className="flex flex-col justify-center items-center w-full bg-amber-600/40 rounded-2xl p-4 font-mono">
-                <div className="group title-container flex justify-start items-between w-full gap-4">
-                    <div className="w-[60px] relative">
-                        <Image src={stamp3} alt="stamp" width={60} className="object-contain absolute inset-0 -rotate-15 group-hover:rotate-0 group-hover:z-10 group-hover:duration-300 group-hover:translate-x-2 transition-all duration-300 ease-in-out" />
-                        <Image src={stamp} alt="stamp" width={60} className="absolute inset-0 object-contain rotate-15 group-hover:rotate-0 group-hover:z-10 group-hover:duration-300 group-hover:-translate-x-2 transition-all duration-300 ease-in-out" />
-                    </div>
-
-                    <div className="flex flex-col justify-between gap-2 py-1">
-                        <h2 className="text-2xl font-semibold">Select a theme</h2>
-                        <span className="text-sm tracking-tight leading-none">We have curated 4 themes for you, choose the one you like</span>
-                    </div>
+        <motion.section className={styles.themeCard} aria-label="Letter theme" initial={{ y: reduceMotion ? 0 : 6, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: reduceMotion ? 0 : 0.4 }}>
+            <div className={styles.themeHeading}>
+                <div className={styles.stamps} aria-hidden="true">
+                    <Image src={stamp3} alt="" width={48} className={styles.stampBack} />
+                    <Image src={stamp} alt="" width={48} className={styles.stampFront} />
                 </div>
-
-                <div className="flex flex-col justify-start items-center gap-2 p-2 mt-4 w-full">
-                    {themeList.map((theme) => (
-                        <button
-                            key={theme.name}
-                            disabled={disabled}
-                            onClick={() => onSelect(theme.name)}
-                            className="group flex justify-start items-center gap-4 w-full p-2 bg-amber-200/30 hover:bg-amber-200/60 rounded-2xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-left"
-                        >
-                            <div className="p-2 bg-yellow-100 rounded-full">
-                                <Flower size={16} className="scale-100 group-hover:scale-120 group-hover:rotate-200 transition-all duration-300 ease-in-out" />
-                            </div>
-                            <div className="flex flex-col justify-between items-start">
-                                <div className="text-lg font-medium">{theme.label}</div>
-                                <div className="text-sm text-neutral-800">{theme.description}</div>
-                            </div>
-                        </button>
-                    ))}
-                </div>
+                <div><p className={styles.eyebrow}>Set the mood</p><h2>Select a theme</h2></div>
             </div>
-        </motion.div>
+            <p className={styles.themeIntro}>Four little worlds. Pick the one that feels like your letter.</p>
+            <div className={styles.themeOptions}>
+                {themes.map(theme => {
+                    const isSelected = selected === theme.name
+                    return <button key={theme.name} type="button" aria-pressed={isSelected} disabled={disabled} onClick={() => onSelect(theme.name)} className={`${styles.themeOption} ${isSelected ? styles.selected : ""}`}>
+                        <span className={styles.themeSwatch} style={{ background: theme.tint, color: theme.color }} aria-hidden="true"><ThemeIcon theme={theme.icon} /></span>
+                        <span className={styles.themeText}><span className={styles.themeName}>{theme.label}</span><span className={styles.themeDescription}>{theme.description}</span></span>
+                        <span className={styles.selectionMark} aria-hidden="true">{isSelected && <Check size={16} />}</span>
+                    </button>
+                })}
+            </div>
+        </motion.section>
     )
 }

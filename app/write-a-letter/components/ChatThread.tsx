@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef } from "react"
 
+import styles from "../write-letter.module.css"
+
 interface ChatThreadProps {
     children: React.ReactNode
 }
@@ -30,12 +32,12 @@ export default function ChatThread({ children }: ChatThreadProps) {
     return (
         <div
             ref={scrollRef}
-            className="flex-1 overflow-y-auto overflow-x-hidden"
+            className={styles.thread}
             role="log"
             aria-label="Chat messages"
             aria-live="polite"
         >
-            <div className="mx-auto max-w-3xl w-full px-4 py-4 flex flex-col gap-3">
+            <div className={styles.threadInner}>
                 {children}
             </div>
         </div>

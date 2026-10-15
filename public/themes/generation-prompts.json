@@ -1,0 +1,29 @@
+{
+  "generator": "Built-in image_gen",
+  "images": [
+    {
+      "name": "blue-background",
+      "prompt": "Use case: stylized-concept. Style: atmospheric lofi scenic photography with a subtle painterly softness, fine analog film grain, nostalgic stillness, muted colors, believable scenery, no people, no lettering, no logos, no watermark. One standalone image, no collage or borders. Wide 16:9 website letter background. Rainy train-window ocean view: looking from inside a quiet coastal train through a rain-speckled window toward a calm ocean and hazy distant coastline. Window frame confined to outer edges. Soft rainy blue-hour light. Overall gradient deep navy through dusty blue to pale blue-gray; no warm color dominance. Central 60% should be uncluttered, softly shaded mid-dark blue ocean and haze so white letter text can overlay it. Gentle subdued reflections, dreamy calm."
+    },
+    {
+      "name": "blue-detail",
+      "prompt": "Use case: stylized-concept. Style: atmospheric lofi scenic photography with a subtle painterly softness, fine analog film grain, nostalgic stillness, muted colors, believable scenery, no people, no lettering, no logos, no watermark. One standalone image, no collage or borders. Near-square postcard detail image. Close-up of raindrops on a train window, with a softly blurred calm ocean and distant coastline beyond. Focus on tactile water beads and delicate trails on glass, cool blue-hour light. Overall gradient deep navy, dusty blue, pale blue-gray. Quiet intimate lofi mood. Match a rainy coastal train scene."
+    },
+    {
+      "name": "green-background",
+      "prompt": "Use case: stylized-concept. Style: atmospheric lofi scenic photography with a subtle painterly softness, fine analog film grain, nostalgic stillness, muted colors, believable scenery, no people, no lettering, no logos, no watermark. One standalone image, no collage or borders. Wide 16:9 website letter background. Empty misty countryside railway station with a modest old platform and small shelter, surrounded by lush trees. Tracks recede softly into fog; station structures sit mainly toward the outer edges. Overall green gradient forest green through muted sage to misty cream. Diffused overcast dawn light, peaceful nostalgia. Central 60% mostly soft mid-dark green mist and low-detail landscape, readable beneath white overlaid letter text."
+    },
+    {
+      "name": "green-detail",
+      "prompt": "Use case: stylized-concept. Style: atmospheric lofi scenic photography with a subtle painterly softness, fine analog film grain, nostalgic stillness, muted colors, believable scenery, no people, no lettering, no logos, no watermark. One standalone image, no collage or borders. Near-square postcard detail image. A simple vintage bicycle leaning naturally against a moss-covered stone wall at a quiet countryside railway station. Soft mist and blurred foliage, damp stone textures, gentle overcast dawn light. Overall green gradient forest green through muted sage to misty cream, restrained cream bicycle accents. Peaceful nostalgic lofi scenic shot."
+    },
+    {
+      "name": "red-background",
+      "prompt": "Use case: stylized-concept. Style: atmospheric lofi scenic photography with a subtle painterly softness, fine analog film grain, nostalgic stillness, muted colors, believable scenery, no people, no lettering, no logos, no watermark. One standalone image, no collage or borders. Wide 16:9 website letter background. Quiet seaside sunset viewed from the shore with a small coastal town at the far edge, calm water and a soft hazy horizon. Overall red theme gradient deep burgundy through dusty rose to soft peach, muted and dreamy rather than vivid orange. Gentle fading dusk, warm longing and nostalgic stillness. Central 60% uncluttered, mid-dark rosy water and subdued sky so white letter text remains readable. No harsh sun hotspot."
+    },
+    {
+      "name": "red-detail",
+      "prompt": "Use case: stylized-concept. Style: atmospheric lofi scenic photography with a subtle painterly softness, fine analog film grain, nostalgic stillness, muted colors, believable scenery, no people, no lettering, no logos, no watermark. One standalone image, no collage or borders. Near-square postcard detail image. Exactly two simple ceramic coffee cups on a quiet cafe's wooden windowsill overlooking the calm seaside at sunset. Cups are the clear foreground focal point, softly blurred ocean beyond. Overall red gradient deep burgundy, dusty rose, soft peach. Gentle fading sunset light, understated warm lofi mood, subtle analog grain. No other tableware clutter."
+    }
+  ]
+}
