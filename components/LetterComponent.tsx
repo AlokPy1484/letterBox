@@ -1,19 +1,18 @@
 "use client"
-import Image, { StaticImageData } from "next/image";
-import background from "../public/02-real.png"
-import prop from "../public/01.avif"
-import loni from "../public/03-loni.jpeg"
-import loni2 from "../public/04-loni.jpeg"
-import { Bookmark, BookMarked, Home, MoveLeft, MoveRight, Pause, Play, Speaker, Volume2, VolumeX } from "lucide-react";
+import Image from "next/image";
+import WaxSeal from "./WaxSeal"
+import { Bookmark, Home } from "lucide-react";
 import { TypingAnimation } from "@/components/ui/typing-animation"
-import { AnimatePresence, motion, scale } from "motion/react"
-import styles from "../components/AudioPlayer/AudioPlayer.module.css"
-import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "motion/react"
+import AudioPlayerControls from "./AudioPlayer/AudioPlayerControls"
 import { useEffect, useRef, useState } from "react";
-import { LetterDataType } from "@/app/types/letters";
+import type { LetterDataType } from "@/app/types/letters";
+import { formatLetterDate } from "@/lib/format-letter-date";
 
 
-export default function Letter({ backgroundImage, secImage, textHighlight, letterData, themeSong }: { backgroundImage: string, secImage: string, textHighlight: string, themeSong: string, letterData: LetterDataType }) {
+export default function Letter({ letterData }: { letterData: LetterDataType; backgroundImage?: string; secImage?: string; textHighlight?: string; themeSong?: string }) {
+
+    const submittedDate = formatLetterDate(letterData.created_at)
 
 
     const parentVariants = {
@@ -50,32 +49,32 @@ export default function Letter({ backgroundImage, secImage, textHighlight, lette
         {
             id: "Yellow",
             name: "Default",
-            backgroundImage: "../themes/defaultBg.jpeg",
+            backgroundImage: "/themes/defaultBg.jpeg",
             secImage: "/themes/defaultImage.jpeg",
             textHighlight: "oklch(75% 0.183 55.934 / 0.5)",
-            themeSong: "../themes/defaultAudio.mp3"
+            themeSong: "/themes/defaultAudio.mp3"
         },
         {
             id: "Blue",
             name: "Default",
-            backgroundImage: "https://placehold.co/1440x900?text=Blue+Background",
-            secImage: "https://placehold.co/200x180?text=Blue+Sec+Image",
+            backgroundImage: "/themes/blue-background.png",
+            secImage: "/themes/blue-detail.png",
             textHighlight: "oklch(75% 0.12 240 / 0.5)",
             themeSong: "/themes/defaultAudio.mp3"
         },
         {
             id: "Green",
             name: "Default",
-            backgroundImage: "https://placehold.co/1440x900?text=Green+Background",
-            secImage: "https://placehold.co/200x180?text=Green+Sec+Image",
+            backgroundImage: "/themes/green-background.png",
+            secImage: "/themes/green-detail.png",
             textHighlight: "oklch(75% 0.12 145 / 0.5)",
             themeSong: "/themes/defaultAudio.mp3"
         },
         {
             id: "Red",
             name: "Default",
-            backgroundImage: "https://placehold.co/1440x900?text=Red+Background",
-            secImage: "https://placehold.co/200x180?text=Red+Sec+Image",
+            backgroundImage: "/themes/red-background.png",
+            secImage: "/themes/red-detail.png",
             textHighlight: "oklch(75% 0.14 25 / 0.5)",
             themeSong: "/themes/defaultAudio.mp3"
         },
@@ -89,44 +88,47 @@ export default function Letter({ backgroundImage, secImage, textHighlight, lette
         }
     ]
 
-    const [themeState, setThemeState] = useState<LetterThemeType>(letterThemes[4])
-
-    useEffect(() => {
-        setThemeState(letterThemes.find(t => t.id === letterData?.theme) || letterThemes[2])
-    }, [letterData])
-
+    const themeState = letterThemes.find(theme => theme.id === letterData.theme) || letterThemes[0]
 
     const audioRef = useRef<HTMLAudioElement>(null)
-
     const [isPlaying, setIsPlaying] = useState(false)
+    const [isMuted, setIsMuted] = useState(false)
     const [progress, setProgress] = useState(0)
+    const [currTime, setCurrTime] = useState(0)
+    const [audioDuration, setAudioDuration] = useState(0)
+    const [audioError, setAudioError] = useState<string | null>(null)
 
-
-    const handleTogglePlay = () => {
-        if (!audioRef.current) return
-
-        if (isPlaying) {
-            audioRef.current.pause()
-
+    const handleTogglePlay = async () => {
+        const audio = audioRef.current
+        if (!audio) return
+        setAudioError(null)
+        if (!audio.paused) {
+            audio.pause()
+            return
         }
-        else {
-            audioRef.current.play()
-
+        try {
+            await audio.play()
+        } catch (error) {
+            // A pause or source change can cancel a pending play request.
+            if (error instanceof Error && error.name === "AbortError") return
+            setIsPlaying(false)
+            setAudioError("Audio could not play. Please try again.")
         }
-        setIsPlaying(!isPlaying)
     }
+
     const handleProgressUpdate = () => {
-        if (!audioRef.current) return;
+        const audio = audioRef.current
+        if (!audio) return
+        const duration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0
+        setAudioDuration(duration)
+        setCurrTime(Number.isFinite(audio.currentTime) ? audio.currentTime : 0)
+        setProgress(duration ? Math.min(100, Math.max(0, audio.currentTime / duration * 100)) : 0)
+    }
 
-        const { currentTime, duration } = audioRef.current;
-
-        if (!Number.isFinite(duration) || duration === 0) return;
-
-        setProgress((currentTime / duration) * 100);
-
-        const current = Number((currentTime / 60).toFixed(2))
-        setCurrTime(current)
-    };
+    const handleMuteToggle = () => {
+        const audio = audioRef.current
+        if (audio) audio.muted = !audio.muted
+    }
 
     const containerRef = useRef<HTMLDivElement>(null)
 
@@ -150,24 +152,13 @@ export default function Letter({ backgroundImage, secImage, textHighlight, lette
 
 
 
-    const [currTime, setCurrTime] = useState<number | null>()
-
-    const handleChangeProgress = (
-        e: React.ChangeEvent<HTMLInputElement>
-    ) => {
-        if (!audioRef.current) return;
-
-        const value = Number(e.target.value);
-        const duration = audioRef.current.duration;
-
-        if (!Number.isFinite(duration)) return;
-
-
-        audioRef.current.currentTime = (value / 100) * duration;
-
-        setProgress(value);
-
-    };
+    const handleChangeProgress = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const audio = audioRef.current
+        if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) return
+        const value = Math.min(100, Math.max(0, Number(e.target.value)))
+        audio.currentTime = (value / 100) * audio.duration
+        handleProgressUpdate()
+    }
 
     const [typingComplete, setTypingComplete] = useState(false)
     const [typingKey, setTypingKey] = useState(0)
@@ -191,43 +182,25 @@ export default function Letter({ backgroundImage, secImage, textHighlight, lette
     // }, [handleRestartTyping])
 
 
-    const [audioTitle, setAudioTitle] = useState<string | null>()
-    const [audioDuration, setAudioDuration] = useState<number | null>()
-
-
-    const handleMetadataFill = () => {
-        if (!audioRef.current) return
-
-        setAudioTitle(audioRef.current.title)
-        const duration = Number((audioRef.current?.duration / 60).toFixed(2))
-        setAudioDuration(duration)
-
-    }
-
-
-    useEffect(() => {
-        handleMetadataFill()
-        handleProgressUpdate()
-
-    }, [])
-
-
-    const [isMuted, setIsMuted] = useState<Boolean | null>(false)
-
-    const handleMuteToggle = () => {
-        if (!audioRef.current) return
-
-        const updatedMute = !isMuted
-
-        audioRef.current.volume = isMuted ? 0 : 1
-        setIsMuted(updatedMute)
-    }
-
-
-
-
     return (
         <div className="w-screen h-dvh overflow-hidden">
+            <audio
+                key={themeState.themeSong}
+                ref={audioRef}
+                src={themeState.themeSong}
+                preload="metadata"
+                onLoadedMetadata={handleProgressUpdate}
+                onDurationChange={handleProgressUpdate}
+                onTimeUpdate={handleProgressUpdate}
+                onSeeked={handleProgressUpdate}
+                onPlay={() => { setIsPlaying(true); setAudioError(null) }}
+                onPause={() => setIsPlaying(false)}
+                onEnded={() => { setIsPlaying(false); handleProgressUpdate() }}
+                onVolumeChange={event => setIsMuted(event.currentTarget.muted)}
+                onEmptied={() => { setIsPlaying(false); setProgress(0); setCurrTime(0); setAudioDuration(0); setAudioError(null) }}
+                onError={() => { setIsPlaying(false); setAudioError("Audio is unavailable. Please try again.") }}
+            />
+            {audioError && <p role="status" className="absolute top-20 inset-x-4 z-20 text-center text-sm text-white">{audioError}</p>}
 
             <span>
                 <Image src={themeState?.backgroundImage} alt="background" className="absolute inset-0 object-cover w-full h-full z-0" width={1920} height={1080} unoptimized />
@@ -296,42 +269,12 @@ export default function Letter({ backgroundImage, secImage, textHighlight, lette
                         <span className="flex flex-col justify-center items-start uppercase whitespace-nowrap">
                             <a>TO: {letterData.recipient_name}</a>
                             <a>FROM: {letterData.sender_name}</a>
-                            <a>SUMITTED: {letterData.created_at}</a>
+                            {submittedDate && <span className="normal-case">SUBMITTED: {submittedDate}</span>}
                         </span>
 
-                        {/* Music Player */}
-                        <div className="hidden md:flex justify-center text-black w-full">
-
-                            <audio ref={audioRef} src={themeState?.themeSong} title="Yellow by Coldplay" onTimeUpdate={handleProgressUpdate} />
-                            {/* <source src="/yellow.mp3" type="audio/mpeg" />
-              Your browser does not support the audio element. */}
-                            <div className="flex justify-between items-center gap-4 w-full max-w-[300px] ">
-                                <div className="rounded-full  border-[0.8px] border-neutral-400 p-2 mt-2 mb-1 cursor-pointer" onClick={handleTogglePlay}>
-                                    {isPlaying ? <Pause fill="black" size={16} /> : <Play fill="black" size={16} />}
-                                </div>
-                                <div className="flex flex-col justify-between items-start w-full h-full">
-                                    <div className="flex justify-between items-center w-full text-[12px] text-neutral-200">
-                                        <a className="">{audioTitle}</a>
-                                        {/* <a> {audioDuration}</a> */}
-                                    </div>
-                                    <input type="range" min={0} max={100} onChange={(e) => handleChangeProgress(e)} value={progress} className={`${styles.slider} w-full z-100`}
-                                        style={{
-                                            background: `linear-gradient(to right, white ${progress}%, #404040 ${progress}%)`,
-                                        }} />
-                                    <div className="flex justify-between w-full text-neutral-100">
-                                        <a>{currTime}</a>
-                                        <a className="">{audioDuration}</a>
-                                    </div>
-                                </div>
-                                <div className="rounded-full  p-2 mt-2 mb-1 cursor-pointer" onClick={handleMuteToggle}>
-                                    {isMuted ? <Volume2 fill="oklch(55.6% 0 none)" strokeOpacity={0.1} size={16} /> : <VolumeX fill="oklch(55.6% 0 none)" strokeOpacity={0.1} size={16} />}
-                                </div>
-
-                            </div>
+                        <div className="hidden md:flex justify-center w-full min-w-0 px-4">
+                            <div className="w-full max-w-[300px]"><AudioPlayerControls theme={themeState.id} isPlaying={isPlaying} isMuted={isMuted} progress={progress} currentTime={currTime} duration={audioDuration} onTogglePlay={handleTogglePlay} onToggleMute={handleMuteToggle} onSeek={handleChangeProgress} /></div>
                         </div>
-
-
-
 
                         <motion.span className="relative  group z-[9999]"
                             variants={parentVariants}
@@ -339,8 +282,9 @@ export default function Letter({ backgroundImage, secImage, textHighlight, lette
                             whileHover="hover">
 
 
-                            <Image src={prop} alt="prop" className=" w-36 md:w-46 h-24 object-cover hover:backdrop-blur-2xl  z-100" />
-                            <span className=" absolute inset-0 w-full h-full bg-neutral-300 z-100 opacity-0 hover:opacity-60 transition-opacity duration-300 ease-in-out"></span>
+                            <span className="flex w-36 md:w-46 h-24 justify-end items-center">
+                                <WaxSeal theme={themeState.id} />
+                            </span>
 
                             <AnimatePresence>
                                 <motion.div className="absolute bottom-34 right-0 flex flex-col justify-center items-center gap-4 bg-neutral-200 p-4 "
@@ -353,31 +297,8 @@ export default function Letter({ backgroundImage, secImage, textHighlight, lette
                         </motion.span>
                     </div>
 
-                    {/* Music Player */}
-                    <div className="flex md:hidden justify-center text-black w-full z-[9999]">
-
-                        <audio ref={audioRef} src={themeSong} title="Yellow by Coldplay" onTimeUpdate={handleProgressUpdate} className="" />
-                        {/* <source src="/yellow.mp3" type="audio/mpeg" />
-              Your browser does not support the audio element. */}
-                        <div className="flex justify-between items-center gap-4 w-full z-[9999] ">
-                            <div className="rounded-full border border-[0.8px] border-neutral-400 p-2 mt-2 mb-1" onClick={handleTogglePlay}>
-                                {isPlaying ? <Pause fill="black" size={16} /> : <Play fill="black" size={16} />}
-                            </div>
-                            <div className="flex flex-col justify-between items-start w-full h-full">
-                                <a className="text-[12px] text-neutral-200">{audioRef.current?.title}</a>
-                                <input type="range" min={0} max={100} onChange={(e) => handleChangeProgress(e)} value={progress} className={`${styles.slider} w-full`}
-                                    style={{
-                                        background: `linear-gradient(to right, white ${progress}%, #404040 ${progress}%)`,
-
-                                    }} />
-                                <div className="flex justify-between w-full text-xs text-neutral-100">
-                                    <a>{currTime}</a>
-                                    <a className="">{audioDuration}</a>
-                                </div>
-                            </div>
-
-
-                        </div>
+                    <div className="flex md:hidden justify-center w-full z-[9999]">
+                        <AudioPlayerControls theme={themeState.id} isPlaying={isPlaying} isMuted={isMuted} progress={progress} currentTime={currTime} duration={audioDuration} onTogglePlay={handleTogglePlay} onToggleMute={handleMuteToggle} onSeek={handleChangeProgress} />
                     </div>
                 </div>
 
@@ -385,6 +306,3 @@ export default function Letter({ backgroundImage, secImage, textHighlight, lette
         </div >
     )
 }
-
-
-
